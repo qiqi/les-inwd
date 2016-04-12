@@ -1,7 +1,8 @@
 from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
-from les_utilities import dx, dy, dz, dt
+from les_utilities import dx, dy, dz, dt, extend_u, extend_p
+from les_utilities import ip, im, jp, jm, kp, km, i
 
 def residual(u_hat, u, u_tilde, p, dpdx):
     dudt = (u_hat - u) / dt
@@ -43,12 +44,12 @@ def convection(u, u_tilde, p, dpdx):
     when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
     when x is not zero, Ax = residual + b
     '''
-    u_hat = residual(zeros(u.shape)
-    b = -ravel(u_hat, u, u_tilde, p, dpdx))
+    u_hat = zeros(u.shape)
+    b = -ravel(residual(u_hat, u, u_tilde, p, dpdx))
     def linear_op(u_hat):
         u_hat = u_hat.reshape(u.shape)
         res = residual(u_hat, u, u_tilde, p, dpdx)
         return ravel(res) + b
-    A = LinearOperator((u.size, u.size), linear_op))
-    u_hat = gmres(A, b, x0=ravel(u.copy()))
-    return u_hat
+    A = LinearOperator((u.size, u.size), linear_op)
+    u_hat, _ = gmres(A, b, x0=ravel(u.copy()))
+    return u_hat.reshape(u.shape)
