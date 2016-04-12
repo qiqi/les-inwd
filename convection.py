@@ -8,12 +8,12 @@ def residual(u_hat, u, u_tilde, p, dpdx):
     dudt = (u_hat - u) / dt
     ux_t, uy_t, uz_t = extend_u(u_tilde)
     p = extend_p(p)
-    u_bar_ip = (i(ux_t) + ip(ux_t)) / 2 + (ip(p) - i(p)) / dx * dt
-    u_bar_im = (i(ux_t) + im(ux_t)) / 2 - (im(p) - i(p)) / dx * dt
-    u_bar_jp = (i(uy_t) + jp(uy_t)) / 2 + (jp(p) - i(p)) / dy * dt
-    u_bar_jm = (i(uy_t) + jm(uy_t)) / 2 - (jm(p) - i(p)) / dy * dt
-    u_bar_kp = (i(uz_t) + kp(uz_t)) / 2 + (kp(p) - i(p)) / dz * dt
-    u_bar_km = (i(uz_t) + km(uz_t)) / 2 - (km(p) - i(p)) / dz * dt
+    u_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
+    u_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * dt
+    u_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
+    u_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * dt
+    u_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * dt
+    u_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * dt
     u = (u_hat + u) / 2
     ux, uy, uz = extend_u(u)
     conv_x = (u_bar_ip * (i(ux) + ip(ux)) / 2 -
@@ -35,7 +35,7 @@ def residual(u_hat, u, u_tilde, p, dpdx):
            + (u_bar_kp * (i(uz) + kp(uz)) / 2 -
               u_bar_km * (i(uz) + km(uz)) / 2) / dz
     conv = array([conv_x, conv_y, conv_z])
-    res = dudt + conv # + dpdx
+    res = dudt + conv  + dpdx
     return res
 
 def convection(u, u_tilde, p, dpdx):
@@ -51,6 +51,6 @@ def convection(u, u_tilde, p, dpdx):
         u_hat = u_hat.reshape(u.shape)
         res = residual(u_hat, u, u_tilde, p, dpdx)
         return ravel(res) + b
-    A = LinearOperator((u.size, u.size), linear_op)
-    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=1E-10)
+    A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
+    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=50)
     return u_hat.reshape(u.shape)

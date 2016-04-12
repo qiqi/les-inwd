@@ -6,12 +6,12 @@ from les_utilities import ip, im, jp, jm, kp, km, i
 
 def residual(p, ux, uy, uz):
     p = extend_p(p)
-    ux_ip = (i(ux) + ip(ux)) / 2 + (ip(p) - i(p)) / dx * dt
-    ux_im = (i(ux) + im(ux)) / 2 - (im(p) - i(p)) / dx * dt
-    uy_jp = (i(uy) + jp(uy)) / 2 + (jp(p) - i(p)) / dy * dt
-    uy_jm = (i(uy) + jm(uy)) / 2 - (jm(p) - i(p)) / dy * dt
-    uz_kp = (i(uz) + kp(uz)) / 2 + (kp(p) - i(p)) / dz * dt
-    uz_km = (i(uz) + km(uz)) / 2 - (km(p) - i(p)) / dz * dt
+    ux_ip = (i(ux) + ip(ux)) / 2 - (ip(p) - i(p)) / dx * dt
+    ux_im = (i(ux) + im(ux)) / 2 + (im(p) - i(p)) / dx * dt
+    uy_jp = (i(uy) + jp(uy)) / 2 - (jp(p) - i(p)) / dy * dt
+    uy_jm = (i(uy) + jm(uy)) / 2 + (jm(p) - i(p)) / dy * dt
+    uz_kp = (i(uz) + kp(uz)) / 2 - (kp(p) - i(p)) / dz * dt
+    uz_km = (i(uz) + km(uz)) / 2 + (km(p) - i(p)) / dz * dt
     return (ux_ip - ux_im) / dx + \
            (uy_jp - uy_jm) / dy + \
            (uz_kp - uz_km) / dz
@@ -29,8 +29,8 @@ def pressure(u):
         p = p.reshape(u[0].shape)
         res = residual(p, ux, uy, uz)
         return ravel(res) + b
-    A = LinearOperator((p.size, p.size), linear_op)
-    p, _ = gmres(A, b, tol=1E-10)
+    A = LinearOperator((p.size, p.size), linear_op, dtype='float64')
+    p, _ = gmres(A, b, tol=1E-6, maxiter=200)
     return p.reshape(u[0].shape)
 
 def pressure_grad(p):
