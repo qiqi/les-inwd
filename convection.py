@@ -35,7 +35,7 @@ def residual(u_hat, u, u_tilde, p, dpdx):
            + (u_bar_kp * (i(uz) + kp(uz)) / 2 -
               u_bar_km * (i(uz) + km(uz)) / 2) / dz
     conv = array([conv_x, conv_y, conv_z])
-    res = dudt + conv + dpdx
+    res = dudt + conv # + dpdx
     return res
 
 def convection(u, u_tilde, p, dpdx):
@@ -44,6 +44,7 @@ def convection(u, u_tilde, p, dpdx):
     when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
     when x is not zero, Ax = residual + b
     '''
+
     u_hat = zeros(u.shape)
     b = -ravel(residual(u_hat, u, u_tilde, p, dpdx))
     def linear_op(u_hat):
@@ -51,5 +52,5 @@ def convection(u, u_tilde, p, dpdx):
         res = residual(u_hat, u, u_tilde, p, dpdx)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op)
-    u_hat, _ = gmres(A, b, x0=ravel(u.copy()))
+    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=1E-10)
     return u_hat.reshape(u.shape)
