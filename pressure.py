@@ -1,5 +1,6 @@
+import time
 from numpy import *
-from scipy.sparse.linalg import LinearOperator, gmres
+from scipy.sparse.linalg import LinearOperator, gmres, cg
 
 from les_utilities import dx, dy, dz, dt, extend_u, extend_p
 from les_utilities import ip, im, jp, jm, kp, km, i
@@ -30,7 +31,11 @@ def pressure(u):
         res = residual(p, ux, uy, uz)
         return ravel(res) + b
     A = LinearOperator((p.size, p.size), linear_op, dtype='float64')
-    p, _ = gmres(A, b, tol=1E-6, maxiter=200)
+    t0 = time.time()
+    p, _ = cg(A, b, tol=1E-8, maxiter=500)
+    print('pressure solver: {0}/{1} after {2:4.1f}s'.format(
+        linalg.norm(A * p - b), linalg.norm(b), time.time() - t0
+    ))
     return p.reshape(u[0].shape)
 
 def pressure_grad(p):

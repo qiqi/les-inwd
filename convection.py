@@ -1,5 +1,6 @@
+import time
 from numpy import *
-from scipy.sparse.linalg import LinearOperator, gmres
+from scipy.sparse.linalg import LinearOperator, lgmres, gmres
 
 from les_utilities import dx, dy, dz, dt, extend_u, extend_p
 from les_utilities import ip, im, jp, jm, kp, km, i
@@ -52,5 +53,10 @@ def convection(u, u_tilde, p, dpdx):
         res = residual(u_hat, u, u_tilde, p, dpdx)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
-    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=50)
+    t0 = time.time()
+    u_hat, _ = lgmres(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=20)
+    #u_hat, _ = bicgstab(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=200)
+    print('momentum solver: {0}/{1} after {2:4.1f}s'.format(
+        linalg.norm(A * u_hat - b), linalg.norm(b), time.time() - t0
+    ))
     return u_hat.reshape(u.shape)
