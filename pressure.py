@@ -1,11 +1,17 @@
-import time
 from numpy import *
-from scipy.sparse.linalg import LinearOperator, gmres, cg
+from scipy.sparse.linalg import LinearOperator, gmres
 
-from les_utilities import dx, dy, dz, dt, extend_u, extend_p
+from les_utilities import lx, ly, lz, dt, extend_u, extend_p, gmrestol
 from les_utilities import ip, im, jp, jm, kp, km, i
 
 def residual(p, ux, uy, uz):
+
+    nx, ny, nz = p.shape
+
+    dx = lx/float(nx)
+    dy = ly/float(ny)
+    dz = lz/float(nz)
+
     p = extend_p(p)
     ux_ip = (i(ux) + ip(ux)) / 2 - (ip(p) - i(p)) / dx * dt
     ux_im = (i(ux) + im(ux)) / 2 + (im(p) - i(p)) / dx * dt
@@ -14,8 +20,8 @@ def residual(p, ux, uy, uz):
     uz_kp = (i(uz) + kp(uz)) / 2 - (kp(p) - i(p)) / dz * dt
     uz_km = (i(uz) + km(uz)) / 2 + (km(p) - i(p)) / dz * dt
     return (ux_ip - ux_im) / dx + \
-           (uy_jp - uy_jm) / dy + \
-           (uz_kp - uz_km) / dz
+            (uy_jp - uy_jm) / dy + \
+            (uz_kp - uz_km) / dz
 
 def pressure(u):
     '''
@@ -31,15 +37,18 @@ def pressure(u):
         res = residual(p, ux, uy, uz)
         return ravel(res) + b
     A = LinearOperator((p.size, p.size), linear_op, dtype='float64')
-    t0 = time.time()
-    p, _ = cg(A, b, tol=1E-8, maxiter=500)
-    print('pressure solver: {0}/{1} after {2:4.1f}s'.format(
-        linalg.norm(A * p - b), linalg.norm(b), time.time() - t0
-    ))
+    p, _ = gmres(A, b, tol=gmrestol, maxiter=200)
     return p.reshape(u[0].shape)
 
-def pressure_grad(p):
-    p = extend_p(p)
+def pressure_grad(p, u=[]):
+
+    nx, ny, nz = p.shape
+
+    dx = lx/float(nx)
+    dy = ly/float(ny)
+    dz = lz/float(nz)
+
+    p = extend_p(p)   
     dpdx = (ip(p) - im(p)) / (2 * dx)
     dpdy = (jp(p) - jm(p)) / (2 * dy)
     dpdz = (kp(p) - km(p)) / (2 * dz)

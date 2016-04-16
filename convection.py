@@ -1,14 +1,21 @@
-import time
 from numpy import *
-from scipy.sparse.linalg import LinearOperator, lgmres, gmres
+from scipy.sparse.linalg import LinearOperator, gmres
 
-from les_utilities import dx, dy, dz, dt, extend_u, extend_p
+from les_utilities import lx, ly, lz, dt, extend_u, extend_p, gmrestol
 from les_utilities import ip, im, jp, jm, kp, km, i
 
 def residual(u_hat, u, u_tilde, p, dpdx):
+
+    nx, ny, nz = p.shape
+
+    dx = lx/float(nx)
+    dy = ly/float(ny)
+    dz = lz/float(nz)
+    
     dudt = (u_hat - u) / dt
     ux_t, uy_t, uz_t = extend_u(u_tilde)
     p = extend_p(p)
+
     u_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
     u_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * dt
     u_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
@@ -53,10 +60,5 @@ def convection(u, u_tilde, p, dpdx):
         res = residual(u_hat, u, u_tilde, p, dpdx)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
-    t0 = time.time()
-    u_hat, _ = lgmres(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=20)
-    #u_hat, _ = bicgstab(A, b, x0=ravel(u.copy()), tol=1E-6, maxiter=200)
-    print('momentum solver: {0}/{1} after {2:4.1f}s'.format(
-        linalg.norm(A * u_hat - b), linalg.norm(b), time.time() - t0
-    ))
+    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=gmrestol, maxiter=50)
     return u_hat.reshape(u.shape)
