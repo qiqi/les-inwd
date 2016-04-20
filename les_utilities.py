@@ -2,7 +2,7 @@ from numpy import *
 
 gmrestol = 1.e-10
 lx = 2*pi
-ly = 0.05
+ly = 2*pi
 lz = 2*pi
 dt = 0.05
 mu = 1.e-1

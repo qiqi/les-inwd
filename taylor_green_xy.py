@@ -4,8 +4,8 @@ from pressure import correct_pressure
 
 if __name__ == '__main__':
     nsave = -1
-    nt = 80
-    ni, nj, nk = 256,256,1
+    nt = 40
+    ni, nj, nk = 64,64,1
     u0 = zeros([3,ni,nj,nk])
     u_bar = zeros([3,ni+1,nj+1,nk+1])
     p0 = zeros([ni,nj,nk])
