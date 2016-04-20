@@ -3,8 +3,8 @@ from les_utilities import lx, ly, lz
 
 if __name__ == '__main__':
     nsave = -1
-    nt = 40
-    ni, nj, nk = 1,128,128
+    nt = 80
+    ni, nj, nk = 1,256,256
 
     u0 = zeros([3,ni,nj,nk])
     u_tilde = zeros([3,ni,nj,nk])

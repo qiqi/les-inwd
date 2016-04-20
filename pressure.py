@@ -20,8 +20,8 @@ def residual(p, ux, uy, uz):
     uz_kp = (i(uz) + kp(uz)) / 2 - (kp(p) - i(p)) / dz * dt
     uz_km = (i(uz) + km(uz)) / 2 + (km(p) - i(p)) / dz * dt
     return (ux_ip - ux_im) / dx + \
-           (uy_jp - uy_jm) / dy + \
-           (uz_kp - uz_km) / dz
+            (uy_jp - uy_jm) / dy + \
+            (uz_kp - uz_km) / dz
 
 def pressure(u):
     '''
