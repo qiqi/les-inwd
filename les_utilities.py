@@ -4,8 +4,8 @@ gmrestol = 1.e-10
 lx = 2*pi
 ly = 2*pi
 lz = 2*pi
-dt = 0.05
-mu = 1.e-1
+dt = 0.2
+mu = 0 #1.e-1
 
 def ip(u):
     return u[2:,1:-1,1:-1]
@@ -78,6 +78,17 @@ def extend_u(u):
 
     return u_ext
 
+def tecplot_write(f, u, p):
+    f.write('TITLE = "LES"\n')
+    f.write('VARIABLES = "X", "Y", "Z", "U-X", "U-Y", "U-Z", "P"\n')
+    f.write('ZONE I={0}, J={1}, K={2}, F=BLOCK\n'.format(*p.shape))
+    x, y, z = meshgrid(*tuple(range(i) for i in p.shape), indexing='ij')
+    for v in [x, y, z, u[0], u[1], u[2], p]:
+        f.write('\n')
+        v = ravel(v.T)
+        for i in range(v.size):
+            f.write('{0} '.format(v[i]))
+
 def write2file(u, p, i):
 
     nx, ny, nz = p.shape
@@ -88,33 +99,36 @@ def write2file(u, p, i):
       
     if i == 0:
         out = open('solution.dat','w',0)
-        out.write('TTILE = "LES Integral Near Wall Defficit solution"\n')
+        out.write('TITLE = "LES Integral Near Wall Defficit solution"\n')
         out.write('FILETYPE = FULL\n')
         out.write('VARIABLES = "X", "Y", "Z", "U", "V", "W", "P"\n')
         out.write('ZONE T = "t = {:10.3E}"\n'.format(i*dt))
         out.write('STRANDID = 1\n'.format(i*dt))
         out.write('SOLUTIONTIME = {:10.3E}\n'.format(i*dt))
         out.write('I = {:d}, J = {:d}, K = {:d}\n'.format(nx,ny,nz))
-        out.write('ZONETYPE = Ordered, DATAPACKING = BLOCK\n')
+        out.write('DATAPACKING = BLOCK\n')
         for j in range(nz):
             for k in range(ny):
                 for l in range(nx):
-                    out.write('{:10.3E}\n'.format(dx*l))
+                    out.write('{:10.3E} '.format(dx*l))
+        out.write('\n')
         for j in range(nz):
             for k in range(ny):
                 for l in range(nx):
-                    out.write('{:10.3E}\n'.format(dy*k))
+                    out.write('{:10.3E} '.format(dy*k))
+        out.write('\n')
         for j in range(nz):
             for k in range(ny):
                 for l in range(nx):
-                    out.write('{:10.3E}\n'.format(dz*j))
+                    out.write('{:10.3E} '.format(dz*j))
+        out.write('\n')
     else:
         out = open('solution.dat','a',0)
         out.write('ZONE T = "t = {:10.3E}"\n'.format(i*dt))
         out.write('STRANDID = 1\n'.format(i*dt))
         out.write('SOLUTIONTIME = {:10.3E}\n'.format(i*dt))
         out.write('I = {:d}, J = {:d}, K = {:d}\n'.format(nx,ny,nz))
-        out.write('ZONETYPE = Ordered, DATAPACKING = BLOCK\n')
+        out.write('DATAPACKING = BLOCK\n')
         out.write('VARSHARELIST=([1-3]=1)\n')
 
     ux, uy, uz = u
@@ -122,14 +136,18 @@ def write2file(u, p, i):
     uy = ravel(uy)
     uz = ravel(uz)
     for j in range(nx*ny*nz):
-        out.write('{:10.3E}\n'.format(ux[j]))
+        out.write('{:10.3E} '.format(ux[j]))
+    out.write('\n')
     for j in range(nx*ny*nz):
-        out.write('{:10.3E}\n'.format(uy[j]))
+        out.write('{:10.3E} '.format(uy[j]))
+    out.write('\n')
     for j in range(nx*ny*nz):
-        out.write('{:10.3E}\n'.format(uz[j]))
+        out.write('{:10.3E} '.format(uz[j]))
+    out.write('\n')
     p = ravel(p)
     for j in range(p.shape[0]):
-        out.write('{:10.3E}\n'.format(p[j]))
+        out.write('{:10.3E} '.format(p[j]))
+    out.write('\n')
     
     out.close()
     

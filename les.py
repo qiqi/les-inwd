@@ -1,7 +1,7 @@
 from numpy import *
 
 from les_utilities import lx, ly, lz, dt, mu, gmrestol
-from les_utilities import write2file, ip, im, jp, jm, kp, km, i
+from les_utilities import tecplot_write, ip, im, jp, jm, kp, km, i
 from les_utilities import extend_u, extend_p, velocity_mid
 from convection import convection
 from pressure import pressure, pressure_grad
@@ -27,14 +27,15 @@ def d_kinetic_energy_dt(u, dudt):
     return (u*dudt).sum()
    
 if __name__ == '__main__':
-    nsave = 2
-    ni, nj, nk = 16,16,16
+    nsave = 5
+    ni, nj, nk = 32, 32, 32
     u = random.random([3, ni, nj, nk])
-    u_tilde = random.random([3, ni, nj, nk])
+    u_bar = random.random([3, ni+1, nj+1, nk+1])
     p = random.random([ni, nj, nk])
     
-    u, u_tilde, p = timestep(u, u_tilde, p)
-    for i in range(20):
-        u, u_tilde, p = timestep(u, u_tilde, p)
+    u, u_bar, p = timestep(u, u_bar, p)
+    for i in range(100):
+        u, u_bar, p = timestep(u, u_bar, p)
         if i % nsave == 0:
-             write2file(u, p, i)
+            with open('sol_{0}.tec'.format(i/nsave), 'w') as f:
+                tecplot_write(f, u, p)
