@@ -1,38 +1,45 @@
+import time
 from numpy import *
 
 from les_utilities import lx, ly, lz, dt, mu, gmrestol
 from les_utilities import tecplot_write, ip, im, jp, jm, kp, km, i
-from les_utilities import extend_u, extend_p, velocity_mid
-from convection import convection
+from les_utilities import extend_u, extend_p
+from convection import convection, velocity_mid
 from pressure import pressure, pressure_grad
 
-def timestep(u0, u_barph, p0):
+def timestep(u0, u_bar, p0):
+    t0 = time.time()
+    u_bar_ext = 1.5 * u_bar[0] - 0.5 * u_bar[1]
+    u_bar[1] = u_bar[0]
     gradp0 = pressure_grad(p0)
-    print("u0: ", kinetic_energy(u0))
-    u_hat = convection(u0, u_barph, gradp0)
-    print("u_tilde0: ", kinetic_energy(u_hat))
+    t1 = time.time()
+    u_hat = convection(u0, u_bar_ext, gradp0)
+    t2 = time.time()
     u_tilde = u_hat + dt * gradp0
     p = pressure(u_tilde)
+    t3 = time.time()
     gradp = pressure_grad(p)
     u = u_tilde - dt * gradp
-    u_bar = velocity_mid(u_tilde, p)
-    print("u: ", kinetic_energy(u))
+    u_bar[0] = velocity_mid(u_tilde, p)
+    t4 = time.time()
+    print("u kinetic energy: {0:.1e}".format(kinetic_energy(u)),
+          "Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}".format(t1-t0, t2-t1,
+                                                           t3-t2, t4-t3))
     return u, u_bar, p
-    
-    
+
 def kinetic_energy(u):
     return (u**2).sum() / 2
 
 def d_kinetic_energy_dt(u, dudt):
     return (u*dudt).sum()
-   
+
 if __name__ == '__main__':
     nsave = 5
     ni, nj, nk = 32, 32, 32
     u = random.random([3, ni, nj, nk])
-    u_bar = random.random([3, ni+1, nj+1, nk+1])
+    u_bar = random.random([2, 6, ni, nj, nk]) * 0.1
     p = random.random([ni, nj, nk])
-    
+
     u, u_bar, p = timestep(u, u_bar, p)
     for i in range(100):
         u, u_bar, p = timestep(u, u_bar, p)

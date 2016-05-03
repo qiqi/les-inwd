@@ -62,25 +62,19 @@ def correct_pressure(p, p0, u_bar):
     dy = ly/float(ny)
     dz = lz/float(nz)
 
-    ux_bar, uy_bar, uz_bar = u_bar
-    u_bar_ip = ux_bar[1:,:-1,:-1]
-    u_bar_im = ux_bar[:-1,:-1,:-1]
-    u_bar_jp = uy_bar[:-1,1:,:-1]
-    u_bar_jm = uy_bar[:-1,:-1,:-1]
-    u_bar_kp = uz_bar[:-1,:-1,1:]
-    u_bar_km = uz_bar[:-1,:-1,:-1]
+    ux_bar_ip, ux_bar_im, uy_bar_jp, uy_bar_jm, uz_bar_kp, uz_bar_km = u_bar
 
     p_ext = extend_p(p - p0)
     lap_p = (ip(p_ext) + im(p_ext)) / dx**2 +\
             (jp(p_ext) + jm(p_ext)) / dy**2 +\
             (kp(p_ext) + km(p_ext)) / dz**2 -\
             2.0 * (1.0/dx**2 + 1.0/dy**2 + 1.0/dz**2) * i(p_ext)
-    
-    u_gradp = (u_bar_ip * (i(p_ext) + ip(p_ext)) / 2 -
-               u_bar_im * (i(p_ext) + im(p_ext)) / 2) / dx \
-            + (u_bar_jp * (i(p_ext) + jp(p_ext)) / 2 -
-               u_bar_jm * (i(p_ext) + jm(p_ext)) / 2) / dy \
-            + (u_bar_kp * (i(p_ext) + kp(p_ext)) / 2 -
-               u_bar_km * (i(p_ext) + km(p_ext)) / 2) / dz
-    
+
+    u_gradp = (ux_bar_ip * (i(p_ext) + ip(p_ext)) / 2 -
+               ux_bar_im * (i(p_ext) + im(p_ext)) / 2) / dx \
+            + (uy_bar_jp * (i(p_ext) + jp(p_ext)) / 2 -
+               uy_bar_jm * (i(p_ext) + jm(p_ext)) / 2) / dy \
+            + (uz_bar_kp * (i(p_ext) + kp(p_ext)) / 2 -
+               uz_bar_km * (i(p_ext) + km(p_ext)) / 2) / dz
+
     return p - lap_p * dt * mu / 2.0 + u_gradp * dt / 2.0

@@ -28,35 +28,11 @@ def km(u):
 def i(u):
     return u[1:-1,1:-1,1:-1]
 
-def velocity_mid(u_tilde, p):
-
-    nx, ny, nz = p.shape
-    
-    dx = lx/float(nx)
-    dy = ly/float(ny)
-    dz = lz/float(nz)
-    
-    ux_t, uy_t, uz_t = extend_u(u_tilde)
-    p = extend_p(p)
-
-    ux_bar = zeros([nx+1,ny+1,nz+1])
-    uy_bar = zeros([nx+1,ny+1,nz+1])
-    uz_bar = zeros([nx+1,ny+1,nz+1])
-
-    ux_bar[1:,:-1,:-1] = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
-    ux_bar[0,:-1,:-1] = (i(ux_t)[0,:,:] + im(ux_t)[0,:,:]) / 2 + (im(p)[0,:,:] - i(p)[0,:,:]) / dx * dt
-    uy_bar[:-1,1:,:-1] = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
-    uy_bar[:-1,0,:-1] = (i(uy_t)[:,0,:] + jm(uy_t)[:,0,:]) / 2 + (jm(p)[:,0,:] - i(p)[:,0,:]) / dy * dt
-    uz_bar[:-1,:-1,1:] = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * dt
-    uz_bar[:-1,:-1,0] = (i(uz_t)[:,:,0] + km(uz_t)[:,:,0]) / 2 + (km(p)[:,:,0] - i(p)[:,:,0]) / dz * dt
-
-    return array([ux_bar,uy_bar,uz_bar])
-
 def extend_p(p):
 
     p_ext = zeros([p.shape[0]+2, p.shape[1]+2, p.shape[2]+2])
     p_ext[1:-1,1:-1,1:-1] = p
-    
+
     p_ext[1:-1,1:-1,0] = p[:,:,-1]
     p_ext[1:-1,1:-1,-1] = p[:,:,0]
     p_ext[1:-1,0,1:-1] = p[:,-1,:]
@@ -96,7 +72,7 @@ def write2file(u, p, i):
     dx = lx/float(nx)
     dy = ly/float(ny)
     dz = lz/float(nz)
-      
+
     if i == 0:
         out = open('solution.dat','w',0)
         out.write('TITLE = "LES Integral Near Wall Defficit solution"\n')
@@ -150,4 +126,4 @@ def write2file(u, p, i):
     out.write('\n')
     
     out.close()
-    
+
