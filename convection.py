@@ -1,7 +1,7 @@
 from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
-from les_utilities import lx, ly, lz, dt, mu, gmrestol
+import settings
 from les_utilities import extend_u, extend_p
 from les_utilities import ip, im, jp, jm, kp, km, i
 
@@ -9,11 +9,11 @@ def residual(u_hat, u, u_bar, gradp):
 
     nx, ny, nz = u.shape[1:]
 
-    dx = lx/float(nx)
-    dy = ly/float(ny)
-    dz = lz/float(nz)
+    dx = settings.lx/float(nx)
+    dy = settings.ly/float(ny)
+    dz = settings.lz/float(nz)
 
-    dudt = (u_hat - u) / dt
+    dudt = (u_hat - u) / settings.dt
 
     ux_bar_ip, ux_bar_im, uy_bar_jp, uy_bar_jm, uz_bar_kp, uz_bar_km = u_bar
     u = (u_hat + u) / 2
@@ -53,7 +53,7 @@ def residual(u_hat, u, u_bar, gradp):
              (kp(uz) + km(uz)) / dz**2 -\
              2.0 * i(uz) * (1.0/dx**2 + 1.0/dy**2 + 1.0/dz**2)
 
-    visc = mu * array([visc_x, visc_y, visc_z])
+    visc = settings.mu * array([visc_x, visc_y, visc_z])
 
     res = dudt + conv + gradp - visc
     return res
@@ -72,26 +72,26 @@ def convection(u, u_bar, gradp):
         res = residual(u_hat, u, u_bar, gradp)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
-    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=gmrestol, maxiter=50)
+    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=50)
     return u_hat.reshape(u.shape)
 
 def velocity_mid(u_tilde, p):
 
     nx, ny, nz = p.shape
 
-    dx = lx/float(nx)
-    dy = ly/float(ny)
-    dz = lz/float(nz)
+    dx = settings.lx/float(nx)
+    dy = settings.ly/float(ny)
+    dz = settings.lz/float(nz)
 
     ux_t, uy_t, uz_t = extend_u(u_tilde)
     p = extend_p(p)
 
-    ux_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
-    ux_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * dt
-    uy_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
-    uy_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * dt
-    uz_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * dt
-    uz_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * dt
+    ux_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * settings.dt
+    ux_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * settings.dt
+    uy_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * settings.dt
+    uy_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * settings.dt
+    uz_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * settings.dt
+    uz_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * settings.dt
 
     # ux_bar = zeros([nx+1,ny+1,nz+1])
     # uy_bar = zeros([nx+1,ny+1,nz+1])

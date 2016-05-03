@@ -1,7 +1,7 @@
 import time
 from numpy import *
 
-from les_utilities import lx, ly, lz, dt, mu, gmrestol
+import settings
 from les_utilities import tecplot_write, ip, im, jp, jm, kp, km, i
 from les_utilities import extend_u, extend_p
 from convection import convection, velocity_mid
@@ -15,11 +15,11 @@ def timestep(u0, u_bar, p0):
     t1 = time.time()
     u_hat = convection(u0, u_bar_ext, gradp0)
     t2 = time.time()
-    u_tilde = u_hat + dt * gradp0
+    u_tilde = u_hat + settings.dt * gradp0
     p = pressure(u_tilde)
     t3 = time.time()
     gradp = pressure_grad(p)
-    u = u_tilde - dt * gradp
+    u = u_tilde - settings.dt * gradp
     u_bar[0] = velocity_mid(u_tilde, p)
     t4 = time.time()
     print("u kinetic energy: {0:.1e}".format(kinetic_energy(u)),

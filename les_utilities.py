@@ -1,12 +1,5 @@
 from numpy import *
 
-gmrestol = 1.e-10
-lx = 2*pi
-ly = 2*pi
-lz = 2*pi
-dt = 0.2
-mu = 0 #1.e-1
-
 def ip(u):
     return u[2:,1:-1,1:-1]
 
@@ -124,6 +117,6 @@ def write2file(u, p, i):
     for j in range(p.shape[0]):
         out.write('{:10.3E} '.format(p[j]))
     out.write('\n')
-    
+
     out.close()
 
