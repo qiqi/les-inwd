@@ -28,7 +28,7 @@ def timestep(u0, u_bar, p0, momentum_source=0):
     return u, u_bar, p
 
 def kinetic_energy(u):
-    return (u**2).mean() / 2
+    return (u**2).sum(0).mean() / 2
 
 def d_kinetic_energy_dt(u, dudt):
     return (u*dudt).sum()
