@@ -58,9 +58,9 @@ def correct_pressure(p, p0, u_bar):
 
     nx, ny, nz = p.shape
 
-    dx = lx/float(nx)
-    dy = ly/float(ny)
-    dz = lz/float(nz)
+    dx = settings.lx/float(nx)
+    dy = settings.ly/float(ny)
+    dz = settings.lz/float(nz)
 
     ux_bar_ip, ux_bar_im, uy_bar_jp, uy_bar_jm, uz_bar_kp, uz_bar_km = u_bar
 
@@ -77,5 +77,5 @@ def correct_pressure(p, p0, u_bar):
             + (uz_bar_kp * (i(p_ext) + kp(p_ext)) / 2 -
                uz_bar_km * (i(p_ext) + km(p_ext)) / 2) / dz
 
-    return p - lap_p * settings.dt * mu / 2.0 + u_gradp * settings.dt / 2.0
+    return p - (lap_p * settings.mu - u_gradp) * settings.dt / 2.0
 

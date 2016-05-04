@@ -7,13 +7,13 @@ from les_utilities import extend_u, extend_p
 from convection import convection, velocity_mid
 from pressure import pressure, pressure_grad
 
-def timestep(u0, u_bar, p0):
+def timestep(u0, u_bar, p0, momentum_source=0):
     t0 = time.time()
     u_bar_ext = 1.5 * u_bar[0] - 0.5 * u_bar[1]
     u_bar[1] = u_bar[0]
     gradp0 = pressure_grad(p0)
     t1 = time.time()
-    u_hat = convection(u0, u_bar_ext, gradp0)
+    u_hat = convection(u0, u_bar_ext, gradp0, momentum_source)
     t2 = time.time()
     u_tilde = u_hat + settings.dt * gradp0
     p = pressure(u_tilde)
@@ -28,7 +28,7 @@ def timestep(u0, u_bar, p0):
     return u, u_bar, p
 
 def kinetic_energy(u):
-    return (u**2).sum() / 2
+    return (u**2).mean() / 2
 
 def d_kinetic_energy_dt(u, dudt):
     return (u*dudt).sum()

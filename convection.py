@@ -5,7 +5,7 @@ import settings
 from les_utilities import extend_u, extend_p
 from les_utilities import ip, im, jp, jm, kp, km, i
 
-def residual(u_hat, u, u_bar, gradp):
+def residual(u_hat, u, u_bar, gradp, source):
 
     nx, ny, nz = u.shape[1:]
 
@@ -55,10 +55,10 @@ def residual(u_hat, u, u_bar, gradp):
 
     visc = settings.mu * array([visc_x, visc_y, visc_z])
 
-    res = dudt + conv + gradp - visc
+    res = dudt + conv + gradp - visc - source
     return res
 
-def convection(u, u_bar, gradp):
+def convection(u, u_bar, gradp, source):
     '''
     Residual is Ax - b
     when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
@@ -66,10 +66,10 @@ def convection(u, u_bar, gradp):
     '''
 
     u_hat = zeros(u.shape)
-    b = -ravel(residual(u_hat, u, u_bar, gradp))
+    b = -ravel(residual(u_hat, u, u_bar, gradp, source))
     def linear_op(u_hat):
         u_hat = u_hat.reshape(u.shape)
-        res = residual(u_hat, u, u_bar, gradp)
+        res = residual(u_hat, u, u_bar, gradp, source)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
     u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=50)

@@ -4,13 +4,13 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
 
 from les import *
-from les_utilities import lx, ly, lz, mu, dt
+from settings import lx, ly, lz, mu, dt
 from pressure import correct_pressure
 
 if __name__ == '__main__':
     nsave = -1
     nt = 40
-    ni, nj, nk = 32,32,1
+    ni, nj, nk = 64,64,1
     u0 = zeros([3,ni,nj,nk])
     ux_bar_im = zeros([ni,nj,nk])
     ux_bar_ip = zeros([ni,nj,nk])
