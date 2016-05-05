@@ -73,7 +73,7 @@ def convection(u, u_bar, gradp, source, f_log):
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
     u_hat, info = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=200)
-    res = residual(u_hat, u, u_bar, gradp, source)
+    res = residual(u_hat.reshape(u.shape), u, u_bar, gradp, source)
     f_log.write("convection GMRES returns {0}, residual={1}\n".format(
                 info, linalg.norm(ravel(res))))
     return u_hat.reshape(u.shape)

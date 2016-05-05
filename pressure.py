@@ -38,8 +38,9 @@ def pressure(u, f_log):
         return ravel(res) + b
     A = LinearOperator((p.size, p.size), linear_op, dtype='float64')
     p, info = cg(A, b, tol=settings.tol, maxiter=500)
+    res = residual(p.reshape(u[0].shape, ux, uy, uz)
     f_log.write("pressure CG returns {0}, residual={1}\n".format(
-                info, linalg.norm(ravel(residual(p, ux, uy, uz)))))
+                info, linalg.norm(ravel(res))))
     return p.reshape(u[0].shape)
 
 def pressure_grad(p):
