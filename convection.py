@@ -58,7 +58,7 @@ def residual(u_hat, u, u_bar, gradp, source):
     res = dudt + conv + gradp - visc - source
     return res
 
-def convection(u, u_bar, gradp, source):
+def convection(u, u_bar, gradp, source, f_log):
     '''
     Residual is Ax - b
     when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
@@ -72,7 +72,8 @@ def convection(u, u_bar, gradp, source):
         res = residual(u_hat, u, u_bar, gradp, source)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
-    u_hat, _ = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=50)
+    u_hat, info = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=50)
+    f_log.write("convection GMRES returns {0}\n".format(info))
     return u_hat.reshape(u.shape)
 
 def velocity_mid(u_tilde, p):

@@ -1,3 +1,4 @@
+import os
 import time
 from numpy import *
 
@@ -7,24 +8,26 @@ from utilities import extend_u, extend_p
 from convection import convection, velocity_mid
 from pressure import pressure, pressure_grad
 
-def timestep(u0, u_bar, p0, momentum_source=0, f_log=None):
+DEVNULL = open(os.devnull, "w")
+
+def timestep(u0, u_bar, p0, momentum_source=0, f_log=DEVNULL):
     t0 = time.time()
     u_bar_ext = 1.5 * u_bar[0] - 0.5 * u_bar[1]
     u_bar[1] = u_bar[0]
     gradp0 = pressure_grad(p0)
     t1 = time.time()
-    u_hat = convection(u0, u_bar_ext, gradp0, momentum_source)
+    u_hat = convection(u0, u_bar_ext, gradp0, momentum_source, f_log=f_log)
     t2 = time.time()
     u_tilde = u_hat + settings.dt * gradp0
-    p = pressure(u_tilde)
+    p = pressure(u_tilde, f_log=f_log)
     t3 = time.time()
     gradp = pressure_grad(p)
     u = u_tilde - settings.dt * gradp
     u_bar[0] = velocity_mid(u_tilde, p)
     t4 = time.time()
-    print("u kinetic energy: {0:.1e}".format(kinetic_energy(u)),
-          "Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}".format(t1-t0, t2-t1,
-                                                           t3-t2, t4-t3))
+    f_log.write("u kinetic energy: {0:.1e}\n".format(kinetic_energy(u)))
+    f_log.write("Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}\n".format(
+                         t1-t0, t2-t1, t3-t2, t4-t3))
     return u, u_bar, p
 
 def kinetic_energy(u):
