@@ -23,7 +23,7 @@ def residual(p, ux, uy, uz):
             (uy_jp - uy_jm) / dy + \
             (uz_kp - uz_km) / dz
 
-def pressure(u):
+def pressure(u, f_log):
     '''
     Residual is Ax - b
     when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
