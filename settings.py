@@ -1,6 +1,6 @@
 from numpy import pi
 
-tol = 1.e-10
+tol = 1.e-12
 lx = 2*pi
 ly = 2*pi
 lz = 2*pi
