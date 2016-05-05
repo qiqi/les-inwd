@@ -2,12 +2,12 @@ import time
 from numpy import *
 
 import settings
-from les_utilities import tecplot_write, ip, im, jp, jm, kp, km, i
-from les_utilities import extend_u, extend_p
+from utilities import tecplot_write, ip, im, jp, jm, kp, km, i
+from utilities import extend_u, extend_p
 from convection import convection, velocity_mid
 from pressure import pressure, pressure_grad
 
-def timestep(u0, u_bar, p0, momentum_source=0):
+def timestep(u0, u_bar, p0, momentum_source=0, f_log=None):
     t0 = time.time()
     u_bar_ext = 1.5 * u_bar[0] - 0.5 * u_bar[1]
     u_bar[1] = u_bar[0]

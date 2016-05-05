@@ -2,8 +2,8 @@ from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
 import settings
-from les_utilities import extend_u, extend_p
-from les_utilities import ip, im, jp, jm, kp, km, i
+from utilities import extend_u, extend_p
+from utilities import ip, im, jp, jm, kp, km, i
 
 def residual(u_hat, u, u_bar, gradp, source):
 
@@ -92,17 +92,6 @@ def velocity_mid(u_tilde, p):
     uy_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * settings.dt
     uz_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * settings.dt
     uz_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * settings.dt
-
-    # ux_bar = zeros([nx+1,ny+1,nz+1])
-    # uy_bar = zeros([nx+1,ny+1,nz+1])
-    # uz_bar = zeros([nx+1,ny+1,nz+1])
-
-    # ux_bar[1:,:-1,:-1] = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
-    # ux_bar[0,:-1,:-1] = (i(ux_t)[0,:,:] + im(ux_t)[0,:,:]) / 2 + (im(p)[0,:,:] - i(p)[0,:,:]) / dx * dt
-    # uy_bar[:-1,1:,:-1] = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
-    # uy_bar[:-1,0,:-1] = (i(uy_t)[:,0,:] + jm(uy_t)[:,0,:]) / 2 + (jm(p)[:,0,:] - i(p)[:,0,:]) / dy * dt
-    # uz_bar[:-1,:-1,1:] = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * dt
-    # uz_bar[:-1,:-1,0] = (i(uz_t)[:,:,0] + km(uz_t)[:,:,0]) / 2 + (km(p)[:,:,0] - i(p)[:,:,0]) / dz * dt
 
     return array([ux_bar_ip, ux_bar_im,
                   uy_bar_jp, uy_bar_jm,

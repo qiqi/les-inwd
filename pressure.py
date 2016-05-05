@@ -2,7 +2,7 @@ from numpy import *
 from scipy.sparse.linalg import LinearOperator, cg
 
 import settings
-from les_utilities import ip, im, jp, jm, kp, km, i, extend_u, extend_p
+from utilities import ip, im, jp, jm, kp, km, i, extend_u, extend_p
 
 def residual(p, ux, uy, uz):
 

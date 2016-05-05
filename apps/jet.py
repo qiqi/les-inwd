@@ -36,7 +36,8 @@ open('jet_quantities.txt', 'wt').close()
 
 for i in range(args.NSTEPS):
     source = fan * (u_inlet - u) * 2
-    u, u_bar, p = les.timestep(u, u_bar, p, source)
+    with open('jet.log', 'at') as f:
+        u, u_bar, p = les.timestep(u, u_bar, p, source, f_log=f)
     with open('jet_quantities.txt', 'at') as f:
         f.write('{0:.18e} {1:.18e} \n'.format(
             les.kinetic_energy(u),
