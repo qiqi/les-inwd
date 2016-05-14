@@ -2,10 +2,9 @@ from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
 import settings
-from utilities import extend_u, extend_p
 from utilities import ip, im, jp, jm, kp, km, i
 
-def residual(u_hat, u, u_bar, gradp, source):
+def residual(u_hat, u, u_bar, gradp, source, extend_u):
 
     nx, ny, nz = u.shape[1:]
 
@@ -58,27 +57,27 @@ def residual(u_hat, u, u_bar, gradp, source):
     res = dudt + conv + gradp - visc - source
     return res
 
-def convection(u, u_bar, gradp, source, f_log):
+def convection(u, u_bar, gradp, source, f_log, extend_u):
     '''
     Residual is Ax - b
-    when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
+    when x=0, residual = -b, so b = -residual(0, u, ...)
     when x is not zero, Ax = residual + b
     '''
 
     u_hat = zeros(u.shape)
-    b = -ravel(residual(u_hat, u, u_bar, gradp, source))
+    b = -ravel(residual(u_hat, u, u_bar, gradp, source, extend_u))
     def linear_op(u_hat):
         u_hat = u_hat.reshape(u.shape)
-        res = residual(u_hat, u, u_bar, gradp, source)
+        res = residual(u_hat, u, u_bar, gradp, source, extend_u)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
     u_hat, info = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=200)
-    res = residual(u_hat.reshape(u.shape), u, u_bar, gradp, source)
+    res = residual(u_hat.reshape(u.shape), u, u_bar, gradp, source, extend_u)
     f_log.write("convection GMRES returns {0}, residual={1}\n".format(
                 info, linalg.norm(ravel(res))))
     return u_hat.reshape(u.shape)
 
-def velocity_mid(u_tilde, p):
+def velocity_mid(u_tilde, p, extend_u, extend_p):
 
     nx, ny, nz = p.shape
 

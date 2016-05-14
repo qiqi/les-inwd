@@ -2,9 +2,10 @@ from numpy import *
 from scipy.sparse.linalg import LinearOperator, cg
 
 import settings
-from utilities import ip, im, jp, jm, kp, km, i, extend_u, extend_p
+import utilities
+from utilities import ip, im, jp, jm, kp, km, i
 
-def residual(p, ux, uy, uz):
+def residual(p, ux, uy, uz, extend_p):
 
     nx, ny, nz = p.shape
 
@@ -19,31 +20,33 @@ def residual(p, ux, uy, uz):
     uy_jm = (i(uy) + jm(uy)) / 2 + (jm(p) - i(p)) / dy * settings.dt
     uz_kp = (i(uz) + kp(uz)) / 2 - (kp(p) - i(p)) / dz * settings.dt
     uz_km = (i(uz) + km(uz)) / 2 + (km(p) - i(p)) / dz * settings.dt
-    return (ux_ip - ux_im) / dx + \
-            (uy_jp - uy_jm) / dy + \
-            (uz_kp - uz_km) / dz
+    res = (ux_ip - ux_im) / dx + \
+          (uy_jp - uy_jm) / dy + \
+          (uz_kp - uz_km) / dz
+    res[0,0,0] = p[0,0,0]
+    return res
 
-def pressure(u, f_log):
+def pressure(u, f_log, extend_u, extend_p):
     '''
     Residual is Ax - b
-    when x=0, residual = -b, so b = -residual(0, u, um, dpdx)
+    when x=0, residual = -b, so b = -residual(0, ...)
     when x is not zero, Ax = residual + b
     '''
     ux, uy, uz = extend_u(u)
     p = zeros(u[0].shape)
-    b = -ravel(residual(p, ux, uy, uz))
+    b = -ravel(residual(p, ux, uy, uz, extend_p))
     def linear_op(p):
         p = p.reshape(u[0].shape)
-        res = residual(p, ux, uy, uz)
+        res = residual(p, ux, uy, uz, extend_p)
         return ravel(res) + b
     A = LinearOperator((p.size, p.size), linear_op, dtype='float64')
     p, info = cg(A, b, tol=settings.tol, maxiter=500)
-    res = residual(p.reshape(u[0].shape), ux, uy, uz)
+    res = residual(p.reshape(u[0].shape), ux, uy, uz, extend_p)
     f_log.write("pressure CG returns {0}, residual={1}\n".format(
                 info, linalg.norm(ravel(res))))
     return p.reshape(u[0].shape)
 
-def pressure_grad(p):
+def pressure_grad(p, extend_p):
 
     nx, ny, nz = p.shape
 
@@ -57,8 +60,8 @@ def pressure_grad(p):
     dpdz = (kp(p) - km(p)) / (2 * dz)
     return array([dpdx, dpdy, dpdz])
 
-def correct_pressure(p, p0, u_bar):
-
+def correct_pressure(p, p0, u_bar, extend_p=None):
+    if extend_p is None: extend_p = utilities.extend_p
     nx, ny, nz = p.shape
 
     dx = settings.lx/float(nx)
