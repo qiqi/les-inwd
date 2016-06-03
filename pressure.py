@@ -7,11 +7,9 @@ from utilities import ip, im, jp, jm, kp, km, i
 
 def residual(p, ux, uy, uz, extend_p):
 
-    nx, ny, nz = p.shape
-
-    dx = settings.lx/float(nx)
-    dy = settings.ly/float(ny)
-    dz = settings.lz/float(nz)
+    dx = diff(settings.x)[:,newaxis,newaxis]
+    dy = diff(settings.y)[newaxis,:,newaxis]
+    dz = diff(settings.z)[newaxis,newaxis,:]
 
     p = extend_p(p)
     ux_ip = (i(ux) + ip(ux)) / 2 - (ip(p) - i(p)) / dx * settings.dt
@@ -48,11 +46,9 @@ def pressure(u, f_log, extend_u, extend_p):
 
 def pressure_grad(p, extend_p):
 
-    nx, ny, nz = p.shape
-
-    dx = settings.lx/float(nx)
-    dy = settings.ly/float(ny)
-    dz = settings.lz/float(nz)
+    dx = diff(settings.x)[:,newaxis,newaxis]
+    dy = diff(settings.y)[newaxis,:,newaxis]
+    dz = diff(settings.z)[newaxis,newaxis,:]
 
     p = extend_p(p)
     dpdx = (ip(p) - im(p)) / (2 * dx)
@@ -62,11 +58,10 @@ def pressure_grad(p, extend_p):
 
 def correct_pressure(p, p0, u_bar, extend_p=None):
     if extend_p is None: extend_p = utilities.extend_p
-    nx, ny, nz = p.shape
 
-    dx = settings.lx/float(nx)
-    dy = settings.ly/float(ny)
-    dz = settings.lz/float(nz)
+    dx = diff(settings.x)[:,newaxis,newaxis]
+    dy = diff(settings.y)[newaxis,:,newaxis]
+    dz = diff(settings.z)[newaxis,newaxis,:]
 
     ux_bar_ip, ux_bar_im, uy_bar_jp, uy_bar_jm, uz_bar_kp, uz_bar_km = u_bar
 

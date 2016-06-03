@@ -6,11 +6,9 @@ from utilities import ip, im, jp, jm, kp, km, i
 
 def residual(u_hat, u, u_bar, gradp, source, extend_u):
 
-    nx, ny, nz = u.shape[1:]
-
-    dx = settings.lx/float(nx)
-    dy = settings.ly/float(ny)
-    dz = settings.lz/float(nz)
+    dx = diff(settings.x)[:,newaxis,newaxis]
+    dy = diff(settings.y)[newaxis,:,newaxis]
+    dz = diff(settings.z)[newaxis,newaxis,:]
 
     dudt = (u_hat - u) / settings.dt
 
@@ -79,11 +77,9 @@ def convection(u, u_bar, gradp, source, f_log, extend_u):
 
 def velocity_mid(u_tilde, p, extend_u, extend_p):
 
-    nx, ny, nz = p.shape
-
-    dx = settings.lx/float(nx)
-    dy = settings.ly/float(ny)
-    dz = settings.lz/float(nz)
+    dx = diff(settings.x)[:,newaxis,newaxis]
+    dy = diff(settings.y)[newaxis,:,newaxis]
+    dz = diff(settings.z)[newaxis,newaxis,:]
 
     ux_t, uy_t, uz_t = extend_u(u_tilde)
     p = extend_p(p)

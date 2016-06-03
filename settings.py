@@ -1,8 +1,9 @@
-from numpy import pi
+import numpy as np
 
 tol = 1.e-12
-lx = 2*pi
-ly = 2*pi
-lz = 2*pi
 dt = 0.2
-mu = 0 #1.e-1
+mu = 1.e-1
+
+x = np.linspace(-np.pi, np.pi, 17)
+y = np.linspace(-np.pi, np.pi, 17)
+z = np.linspace(-np.pi, np.pi, 17)
