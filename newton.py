@@ -1,5 +1,4 @@
 from numpy import *
-from utilities_blasius import *
 from scipy.sparse.linalg import LinearOperator, gmres
 from numpy.linalg import *
 
