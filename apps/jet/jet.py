@@ -15,9 +15,9 @@ args = parser.parse_args()
 
 ni, nj, nk, dt = 80, 20, 20, 0.25
 
-les.settings.lx = 8
-les.settings.ly = 2
-les.settings.lz = 2
+les.settings.lx = linspace(0, 8, ni+1)
+les.settings.ly = linspace(-1, 1, nj+1)
+les.settings.lz = linspace(-1, 1, nj+1)
 les.settings.dt = dt
 les.settings.mu = 1 / args.RE
 
