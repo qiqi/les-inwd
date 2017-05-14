@@ -1,3 +1,6 @@
+__all__ = ['ip', 'im', 'jp', 'jm', 'kp', 'km', 'i',
+           'tecplot_write', 'periodic_u', 'periodic_p']
+
 from numpy import *
 
 def ip(u):
@@ -21,8 +24,7 @@ def km(u):
 def i(u):
     return u[1:-1,1:-1,1:-1]
 
-def extend_p(p):
-
+def periodic_p(p):
     p_ext = zeros([p.shape[0]+2, p.shape[1]+2, p.shape[2]+2])
     p_ext[1:-1,1:-1,1:-1] = p
 
@@ -32,10 +34,9 @@ def extend_p(p):
     p_ext[1:-1,-1,1:-1] = p[:,0,:]
     p_ext[0,1:-1,1:-1] = p[-1,:,:]
     p_ext[-1,1:-1,1:-1] = p[0,:,:]
-
     return p_ext
 
-def extend_u(u):
+def periodic_u(u):
     u_ext = zeros([u.shape[0], u.shape[1]+2, u.shape[2]+2, u.shape[3]+2])
     u_ext[:,1:-1,1:-1,1:-1] = u
     u_ext[:,1:-1,1:-1,0] = u[:,:,:,-1]
@@ -44,7 +45,6 @@ def extend_u(u):
     u_ext[:,1:-1,-1,1:-1] = u[:,:,0,:]
     u_ext[:,0,1:-1,1:-1] = u[:,-1,:,:]
     u_ext[:,-1,1:-1,1:-1] = u[:,0,:,:]
-
     return u_ext
 
 def tecplot_write(f, u, p):
@@ -59,9 +59,7 @@ def tecplot_write(f, u, p):
             f.write('{0} '.format(v[i]))
 
 def write2file(u, p, i):
-
     nx, ny, nz = p.shape
-
     dx = lx/float(nx)
     dy = ly/float(ny)
     dz = lz/float(nz)

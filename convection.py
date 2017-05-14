@@ -1,16 +1,13 @@
+__all__ = ['convection', 'velocity_mid']
+
 from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
-import settings
 from utilities import ip, im, jp, jm, kp, km, i
 
-def residual(u_hat, u, u_bar, gradp, source, extend_u):
-
-    dx = diff(settings.x)[:,newaxis,newaxis]
-    dy = diff(settings.y)[newaxis,:,newaxis]
-    dz = diff(settings.z)[newaxis,newaxis,:]
-
-    dudt = (u_hat - u) / settings.dt
+def _residual(settings, u_hat, u, u_bar, gradp, source, extend_u):
+    dx, dy, dz, dt = settings.dx, settings.dy, settings.dz, settings.dt
+    dudt = (u_hat - u) / dt
 
     ux_bar_ip, ux_bar_im, uy_bar_jp, uy_bar_jm, uz_bar_kp, uz_bar_km = u_bar
     u = (u_hat + u) / 2
@@ -50,12 +47,12 @@ def residual(u_hat, u, u_bar, gradp, source, extend_u):
              (kp(uz) + km(uz)) / dz**2 -\
              2.0 * i(uz) * (1.0/dx**2 + 1.0/dy**2 + 1.0/dz**2)
 
-    visc = settings.mu * array([visc_x, visc_y, visc_z])
+    visc = settings.nu * array([visc_x, visc_y, visc_z])
 
     res = dudt + conv + gradp - visc - source
     return res
 
-def convection(u, u_bar, gradp, source, f_log, extend_u):
+def convection(settings, u, u_bar, gradp, source, f_log, extend_u):
     '''
     Residual is Ax - b
     when x=0, residual = -b, so b = -residual(0, u, ...)
@@ -63,33 +60,29 @@ def convection(u, u_bar, gradp, source, f_log, extend_u):
     '''
 
     u_hat = zeros(u.shape)
-    b = -ravel(residual(u_hat, u, u_bar, gradp, source, extend_u))
+    b = -ravel(_residual(settings, u_hat, u, u_bar, gradp, source, extend_u))
     def linear_op(u_hat):
         u_hat = u_hat.reshape(u.shape)
-        res = residual(u_hat, u, u_bar, gradp, source, extend_u)
+        res = _residual(settings, u_hat, u, u_bar, gradp, source, extend_u)
         return ravel(res) + b
     A = LinearOperator((u.size, u.size), linear_op, dtype='float64')
     u_hat, info = gmres(A, b, x0=ravel(u.copy()), tol=settings.tol, maxiter=200)
-    res = residual(u_hat.reshape(u.shape), u, u_bar, gradp, source, extend_u)
+    res = _residual(settings, u_hat.reshape(u.shape), u, u_bar, gradp, source, extend_u)
     f_log.write("convection GMRES returns {0}, residual={1}\n".format(
                 info, linalg.norm(ravel(res))))
     return u_hat.reshape(u.shape)
 
-def velocity_mid(u_tilde, p, extend_u, extend_p):
-
-    dx = diff(settings.x)[:,newaxis,newaxis]
-    dy = diff(settings.y)[newaxis,:,newaxis]
-    dz = diff(settings.z)[newaxis,newaxis,:]
-
+def velocity_mid(settings, u_tilde, p, extend_u, extend_p):
+    dx, dy, dz, dt = settings.dx, settings.dy, settings.dz, settings.dt
     ux_t, uy_t, uz_t = extend_u(u_tilde)
     p = extend_p(p)
 
-    ux_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * settings.dt
-    ux_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * settings.dt
-    uy_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * settings.dt
-    uy_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * settings.dt
-    uz_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * settings.dt
-    uz_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * settings.dt
+    ux_bar_ip = (i(ux_t) + ip(ux_t)) / 2 - (ip(p) - i(p)) / dx * dt
+    ux_bar_im = (i(ux_t) + im(ux_t)) / 2 + (im(p) - i(p)) / dx * dt
+    uy_bar_jp = (i(uy_t) + jp(uy_t)) / 2 - (jp(p) - i(p)) / dy * dt
+    uy_bar_jm = (i(uy_t) + jm(uy_t)) / 2 + (jm(p) - i(p)) / dy * dt
+    uz_bar_kp = (i(uz_t) + kp(uz_t)) / 2 - (kp(p) - i(p)) / dz * dt
+    uz_bar_km = (i(uz_t) + km(uz_t)) / 2 + (km(p) - i(p)) / dz * dt
 
     return array([ux_bar_ip, ux_bar_im,
                   uy_bar_jp, uy_bar_jm,

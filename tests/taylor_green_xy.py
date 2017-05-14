@@ -1,22 +1,24 @@
+from __future__ import print_function
+
 import os
 import sys
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
 
-from les import *
+from navierstokes import *
 import settings
 from pressure import correct_pressure
 from numpy import linspace, pi, cos, sin
 
 if __name__ == '__main__':
     nsave = -1
-    nt = 40
-    ni, nj, nk = 64,64,1
-    settings.x = linspace(-pi, pi, ni+1)
-    settings.y = linspace(-pi, pi, nj+1)
-    settings.z = linspace(-pi, pi, nk+1)
-    dt = settings.dt
-    mu = settings.mu
+    T, nu = 1, 1E-1
+    dt, n = 0.05, 16
+    ni, nj, nk, nt = n, n, 1, int(round(T/dt))
+    ns = NavierStokes(linspace(-pi, pi, ni+1),
+                      linspace(-pi, pi, nj+1),
+                      linspace(-pi, pi, nk+1), nu, dt)
+
     u0 = zeros([3,ni,nj,nk])
     ux_bar_im = zeros([ni,nj,nk])
     ux_bar_ip = zeros([ni,nj,nk])
@@ -26,14 +28,8 @@ if __name__ == '__main__':
     uz_bar_kp = zeros([ni,nj,nk])
     p0 = zeros([ni,nj,nk])
 
-    dx = diff(settings.x)[:,newaxis,newaxis]
-    dy = diff(settings.y)[newaxis,:,newaxis]
-    dz = diff(settings.z)[newaxis,newaxis,:]
-
-    x = (settings.x[1:] + settings.x[:-1])[:,newaxis,newaxis] / 2
-    y = (settings.y[1:] + settings.y[:-1])[newaxis,:,newaxis] / 2
-    z = (settings.z[1:] + settings.z[:-1])[newaxis,newaxis,:] / 2
-
+    x, y, z = ns.settings.xc, ns.settings.yc, ns.settings.zc
+    dx, dy, dz = ns.settings.dx, ns.settings.dy, ns.settings.dz
     u0[0] = +sin(x)*cos(y)
     u0[1] = -cos(x)*sin(y)
     p0[:] = (cos(2*x) + cos(2*y))/4.0
@@ -45,29 +41,24 @@ if __name__ == '__main__':
     u_bar0 = array([ux_bar_im, ux_bar_ip,
                     uy_bar_jm, uy_bar_jp,
                     uz_bar_km, uz_bar_kp])
-    u_bar = array([u_bar0, u_bar0 * exp(2*mu*dt)])
-    u = u0
-    p = p0
-    for i in range(nt):
-        pm = p
-        u, u_bar, p = timestep(u, u_bar, p)
-        if nsave > 0:
-            if i % nsave == 0:
-                write2file(u, p, i)
-            elif nsave == 0:
-                if i == nt-1:
-                    write2file(u, p, i)
+    u_bar = array([u_bar0, u_bar0 * exp(2*nu*dt)])
 
-    p = correct_pressure(p, pm, (u_bar[0] * 3 - u_bar[1]) / 2)
-    error_u = u-u0*exp(-2*mu*nt*dt)
-    error_p = p-p0*exp(-4*mu*(nt-0.5)*dt)
+    ns.init(u0, u_bar, p0)
+    for i in range(nt):
+        ns.timestep()
+        if nsave > 0:
+            if i % nsave == 0 or i == nt-1:
+                write2file(ns.u, ns.p_correct, i)
+
+    error_u = ns.u - u0*exp(-2*nu*nt*dt)
+    error_p = ns.p_correct - p0*exp(-4*nu*(nt-0.5)*dt)
     error_p -= error_p.mean()
     print('ni, nj, nk, nt: ', ni, nj, nk, nt)
     print('Solution error in u and p: ', abs(error_u).max(), abs(error_p).max())
 
     with open('u_0.tec', 'w') as f:
-        tecplot_write(f, u0*exp(-2*mu*nt*dt), p0*exp(-4*mu*(nt-0.5)*dt))
+        tecplot_write(f, u0*exp(-2*nu*nt*dt), p0*exp(-4*nu*(nt-0.5)*dt))
     with open('u_1.tec', 'w') as f:
-        tecplot_write(f, u, p)
+        tecplot_write(f, ns.u, ns.p_correct)
     with open('u_2.tec', 'w') as f:
-        tecplot_write(f, u-u0*exp(-2*mu*nt*dt), p-p0*exp(-4*mu*(nt-0.5)*dt))
+        tecplot_write(f, ns.u-u0*exp(-2*nu*nt*dt), ns.p_correct-p0*exp(-4*nu*(nt-0.5)*dt))
