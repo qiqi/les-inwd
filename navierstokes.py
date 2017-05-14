@@ -105,6 +105,17 @@ class NavierStokes:
         self.f_log.write("Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}\n".format(
                              t1-t0, t2-t1, t3-t2, t4-t3))
 
+    def tecwrite(self, fname):
+        with open(fname, 'w') as f:
+            tecplot_write(f, self.u, self.p_correct)
+
+    def save(self, fname):
+        savez(fname, u=self.u, u_bar=self.u_bar, p=self.p, p0=self.p0)
+
+    def load(self, fname):
+        data = load(fname)
+        self.init(data['u'], data['u_bar'], data['p'], data['p0'])
+
 
 if __name__ == '__main__':
     def kinetic_energy(u): return (u**2).sum(0).mean() / 2
@@ -120,5 +131,4 @@ if __name__ == '__main__':
         ns.timestep()
         print("u kinetic energy: {0:.1e}\n".format(kinetic_energy(ns.u)))
         if i % nsave == 0:
-            with open('sol_{0}.tec'.format(i/nsave), 'w') as f:
-                tecplot_write(f, ns.u, ns.p)
+            ns.tecwrite('sol_{0}.tec'.format(i/nsave))

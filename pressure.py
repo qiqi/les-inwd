@@ -18,7 +18,7 @@ def _residual(settings, p, ux, uy, uz, extend_p):
     res = (ux_ip - ux_im) / dx + \
           (uy_jp - uy_jm) / dy + \
           (uz_kp - uz_km) / dz
-    res[0,0,0] = p[0,0,0]
+    #res[0,0,0] = p[0,0,0]
     return res
 
 def pressure(settings, u, f_log, extend_u, extend_p):
