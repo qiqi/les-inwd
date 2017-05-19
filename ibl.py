@@ -1,3 +1,5 @@
+__all__ = ['IBL']
+
 import os
 import sys
 import pdb
@@ -113,7 +115,7 @@ class IBL:
         dMqe = (self.M[1] * i(qe1) - self.M[0] * i(qe0)).sum(0)
         self.trP[1] -= (dt * ddtP - dMqe) * 2
 
-        #pdb.set_trace()
+        # pdb.set_trace()
 
 def Hstar_H(H):
     Hstar = 1.525 + (0.076 - 0.065 * (H-2) / H) * (H - 4)**2 / H
@@ -129,50 +131,5 @@ def Cf_H(H):
     Cf_o2[H<6.2] = -0.066 + 0.066 * (6.2 - H[H<6.2])**1.5 / (H[H<6.2] - 1)
     return Cf_o2 * 2
 
-def test_blasius_x():
-    nu, M0, H0 = 1E-4, 2E-3, 2.59
-    P0 = M0 * (1 - 1 / H0)
-
-    def extend_M(M):
-        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2])
-        M_ext[0] += M0
-        M_ext[:,1:-1,1:-1] = M
-        M_ext[:,1:-1,0] = M[:,:,0]
-        M_ext[:,1:-1,-1] = M[:,:,-1]
-        M_ext[:,-1,:] = M_ext[:,-2,:]
-        return M_ext
-
-    def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2]) + P0
-        P_ext[1:-1,1:-1] = P
-        P_ext[1:-1,0] = P[:,0]
-        P_ext[1:-1,-1] = P[:,-1]
-        P_ext[-1,:] = P_ext[-2,:]
-        return P_ext
-
-    nx, nz, dt = 100, 1, 2E-3
-    xgrid = arange(nx+1, dtype=float) / nx
-    zgrid = arange(nz+1, dtype=float) / nx
-    ibl = IBL(xgrid, zgrid, 1E-4, dt, f_log=sys.stdout,
-              extend_M=extend_M, extend_trP=extend_trP)
-    Z = zeros([nx,nz])
-    ibl.init(array([M0 + Z, Z]), P0 + Z)
-    Z = zeros([nx+2, nz+2])
-    qe = array([1 + Z, Z])
-    pe = Z
-    x = ibl.settings.xc[:,0]
-    for istep in range(2500):
-        ibl.timestep(qe, qe, pe)
-        # if istep % 500 == 0:
-        #     plot(x, ibl.M[1,0,:,0])
-    delta_star_analytical = 1.72 * sqrt(nu * (x + x[0]) + (M0 / 1.72)**2)
-    # plot(x, delta_star_analytical, '--k')
-    err_M = ibl.M[1,0,:,0] - delta_star_analytical
-    err_H = ibl.H - H0
-    assert abs(err_M).max() < 1E-2 * delta_star_analytical.max()
-    assert abs(err_H).max() < 1E-2 * H0
-    return ibl
-
 if __name__ == '__main__':
-    from pylab import *
-    ibl = test_blasius_x()
+    pass

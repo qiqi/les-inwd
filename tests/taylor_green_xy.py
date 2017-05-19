@@ -6,7 +6,6 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
 
 from navierstokes import *
-import settings
 from pressure import correct_pressure
 from numpy import linspace, pi, cos, sin
 
