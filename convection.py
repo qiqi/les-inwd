@@ -3,7 +3,7 @@ __all__ = ['convection', 'velocity_mid']
 from numpy import *
 from scipy.sparse.linalg import LinearOperator, gmres
 
-from utilities import ip, im, jp, jm, kp, km, i
+from utilities3d import ip, im, jp, jm, kp, km, i
 
 def _residual(settings, u_hat, u, u_bar, gradp, source, extend_u):
     dx, dy, dz, dt = settings.dx, settings.dy, settings.dz, settings.dt

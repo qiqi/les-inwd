@@ -3,7 +3,7 @@ import sys
 import time
 from numpy import *
 
-from utilities import *
+from utilities3d import *
 from convection import *
 from pressure import *
 
@@ -102,8 +102,8 @@ class NavierStokes:
                 extend_u=self.extend_u, extend_p=self.extend_p)
 
         t4 = time.time()
-        self.f_log.write("Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}\n".format(
-                             t1-t0, t2-t1, t3-t2, t4-t3))
+        timing_str = "Navier-Stokes Timing: {0:.1e} {1:.1e} {2:.1e} {3:.1e}\n"
+        self.f_log.write(timing_str.format(t1-t0, t2-t1, t3-t2, t4-t3))
 
     def tecwrite(self, fname):
         with open(fname, 'w') as f:

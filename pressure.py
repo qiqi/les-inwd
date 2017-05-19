@@ -3,8 +3,7 @@ __all__ = ['pressure', 'pressure_grad', 'correct_pressure']
 from numpy import *
 from scipy.sparse.linalg import LinearOperator, cg
 
-import utilities
-from utilities import ip, im, jp, jm, kp, km, i
+from utilities3d import ip, im, jp, jm, kp, km, i
 
 def _residual(settings, p, ux, uy, uz, extend_p):
     dx, dy, dz, dt = settings.dx, settings.dy, settings.dz, settings.dt
