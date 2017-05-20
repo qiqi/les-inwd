@@ -31,7 +31,7 @@ def test_blasius_x():
     nx, nz, dt = 100, 1, 2E-3
     xgrid = arange(nx+1, dtype=float) / nx
     zgrid = arange(nz+1, dtype=float) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, f_log=sys.stdout,
+    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
               extend_M=extend_M, extend_trP=extend_trP)
     Z = zeros([nx,nz])
     ibl.init(array([M0 + Z, Z]), P0 + Z)
@@ -75,7 +75,7 @@ def test_blasius_z():
     nx, nz, dt = 2, 100, 0.1
     xgrid = arange(nx+1, dtype=float) / nx
     zgrid = arange(nz+1, dtype=float) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, f_log=sys.stdout,
+    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
               extend_M=extend_M, extend_trP=extend_trP)
     Z = zeros([nx,nz])
     ibl.init(array([Z, M0 + Z]), P0 + Z)
@@ -130,7 +130,7 @@ def test_blasius_xz():
         P_ext[:,-1] = P_ext[:,-2]
         return P_ext
 
-    ibl = IBL(xgrid, zgrid, nu, dt, f_log=sys.stdout,
+    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
               extend_M=extend_M, extend_trP=extend_trP)
     Z = zeros([nx,nz])
     ibl.init(M0 * qe0[:,newaxis,newaxis] + Z, M0 * (1 - 1 / H0) + Z)
