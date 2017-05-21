@@ -100,7 +100,7 @@ class IBL:
         dMqe = (self.M[1] * i(qe1) - self.M[0] * i(qe0)).sum(0)
         self.trP[1] -= (dt * ddtP - dMqe) * 2
 
-        # pdb.set_trace()
+        #pdb.set_trace()
 
 class Laminar2dClosure:
     @classmethod
@@ -117,6 +117,7 @@ class Laminar2dClosure:
         tau_w = qe * qe_mag / 2 * cls.Cf_H(H) / Re_theta
         K = qe_mag**2 / 2 * M * Hstar / H
         D = qe_mag**3 * cls.Cd_H(H) / Re_theta
+        #pdb.set_trace()
         return P, H, tau_w, K, D
 
 class MyLaminar2dClosure(Laminar2dClosure):
@@ -137,5 +138,10 @@ class MyLaminar2dClosure(Laminar2dClosure):
         Cf_o2[H<6.2] = -0.066 + 0.066 * (6.2 - H[H<6.2])**1.5 / (H[H<6.2] - 1)
         return Cf_o2 * 2
 
+
+
 if __name__ == '__main__':
-    pass
+    for a0, dstar0, H0, dt, nsteps in a_dstar_H_dt_nsteps_table[:8]:
+        figure()
+        test_falkner_skan_x(a0, dstar0, H0, dt, nsteps)
+        title('H={}'.format(H0))
