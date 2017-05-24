@@ -5,14 +5,18 @@ import sys
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
 
+from numpy import *
+
 from ibl import *
+
+test_dtype = float16
 
 def test_blasius_x():
     nu, M0, H0 = 1E-4, 2E-3, 2.59
     P0 = M0 * (1 - 1 / H0)
 
     def extend_M(M):
-        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2])
+        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
         M_ext[0] += M0
         M_ext[:,1:-1,1:-1] = M
         M_ext[:,1:-1,0] = M[:,:,0]
@@ -21,7 +25,7 @@ def test_blasius_x():
         return M_ext
 
     def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2]) + P0
+        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype) + P0
         P_ext[1:-1,1:-1] = P
         P_ext[1:-1,0] = P[:,0]
         P_ext[1:-1,-1] = P[:,-1]
@@ -29,13 +33,13 @@ def test_blasius_x():
         return P_ext
 
     nx, nz, dt = 100, 1, 2E-3
-    xgrid = arange(nx+1, dtype=float) / nx
-    zgrid = arange(nz+1, dtype=float) / nx
+    xgrid = arange(nx+1, dtype=test_dtype) / nx
+    zgrid = arange(nz+1, dtype=test_dtype) / nx
     ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP)
-    Z = zeros([nx,nz])
+              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(array([M0 + Z, Z]), P0 + Z)
-    Z = zeros([nx+2, nz+2])
+    Z = zeros([nx+2, nz+2], dtype=test_dtype)
     qe = array([1 + Z, Z])
     pe = Z
     x = ibl.settings.xc[:,0]
@@ -47,8 +51,10 @@ def test_blasius_x():
     #plot(x, delta_star_analytical, '--k')
     err_M = ibl.M[1,0,:,0] - delta_star_analytical
     err_H = ibl.H - H0
-    assert abs(err_M).max() < 1E-2 * delta_star_analytical.max()
-    assert abs(err_H).max() < 1E-2 * H0
+    #print(abs(err_M).max(), delta_star_analytical.max())
+    #print(abs(err_H).max(), H0)
+    assert abs(err_M).max() < 3E-2 * delta_star_analytical.max()
+    assert abs(err_H).max() < 3E-2 * H0
     return ibl
 
 def test_blasius_z():
@@ -56,7 +62,7 @@ def test_blasius_z():
     P0 = M0 * (1 - 1 / H0)
 
     def extend_M(M):
-        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2])
+        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
         M_ext[1] += M0
         M_ext[:,1:-1,1:-1] = M
         M_ext[:,0,1:-1] = M[:,0,:]
@@ -65,7 +71,7 @@ def test_blasius_z():
         return M_ext
 
     def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2]) + P0
+        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype) + P0
         P_ext[1:-1,1:-1] = P
         P_ext[0,1:-1] = P[0,:]
         P_ext[-1,1:-1] = P[-1,:]
@@ -73,13 +79,13 @@ def test_blasius_z():
         return P_ext
 
     nx, nz, dt = 2, 100, 0.1
-    xgrid = arange(nx+1, dtype=float) / nx
-    zgrid = arange(nz+1, dtype=float) / nx
+    xgrid = arange(nx+1, dtype=test_dtype) / nx
+    zgrid = arange(nz+1, dtype=test_dtype) / nx
     ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP)
-    Z = zeros([nx,nz])
+              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(array([Z, M0 + Z]), P0 + Z)
-    Z = zeros([nx+2, nz+2])
+    Z = zeros([nx+2, nz+2], dtype=test_dtype)
     qe = array([Z, 1 + Z])
     pe = Z
     z = ibl.settings.zc[0]
@@ -91,8 +97,8 @@ def test_blasius_z():
     #plot(z, delta_star_analytical, '--k')
     err_M = ibl.M[1,1] - delta_star_analytical
     err_H = ibl.H - H0
-    assert abs(err_M).max() < 2E-2 * delta_star_analytical.max()
-    assert abs(err_H).max() < 2E-2 * H0
+    assert abs(err_M).max() < 3E-2 * delta_star_analytical.max()
+    assert abs(err_H).max() < 3E-2 * H0
     return ibl
 
 def test_blasius_xz():
@@ -100,8 +106,8 @@ def test_blasius_xz():
     qe0 = array([1, sqrt(3)]) / 2
 
     nx, nz, dt = 20, 50, 2E-2
-    xgrid = arange(nx+1, dtype=float) / nx
-    zgrid = arange(nz+1, dtype=float) / nx
+    xgrid = arange(nx+1, dtype=test_dtype) / nx
+    zgrid = arange(nz+1, dtype=test_dtype) / nx
 
     d_x0 = -0.5 / nx * qe0[0] + (arange(nz) + 0.5) / nx * qe0[1]
     d_z0 = -0.5 / nx * qe0[1] + (arange(nx) + 0.5) / nx * qe0[0]
@@ -111,7 +117,7 @@ def test_blasius_xz():
     P_z0 = M_z0 * (1 - 1 / H0)
 
     def extend_M(M):
-        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2])
+        M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
         M_ext[:,1:-1,1:-1] = M
         M_ext[:,0,1:-1] = qe0[:,newaxis] * M_x0
         M_ext[:,1:-1,0] = qe0[:,newaxis] * M_z0
@@ -121,7 +127,7 @@ def test_blasius_xz():
         return M_ext
 
     def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2])
+        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype)
         P_ext[1:-1,1:-1] = P
         P_ext[0,1:-1] = P_x0
         P_ext[1:-1,0] = P_z0
@@ -131,10 +137,10 @@ def test_blasius_xz():
         return P_ext
 
     ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP)
-    Z = zeros([nx,nz])
+              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(M0 * qe0[:,newaxis,newaxis] + Z, M0 * (1 - 1 / H0) + Z)
-    Z = zeros([nx+2, nz+2])
+    Z = zeros([nx+2, nz+2], dtype=test_dtype)
     qe = array(qe0[:,newaxis,newaxis] + Z)
     pe = Z
     d = ibl.settings.xc * qe0[0] + ibl.settings.zc * qe0[1]
@@ -148,10 +154,10 @@ def test_blasius_xz():
     # subplot(2,1,2); plot(d, qe0[1] * delta_star_analytical, ':k')
     err_M = ibl.M[1] - qe0[:,newaxis,newaxis] * delta_star_analytical
     err_H = ibl.H - H0
-    # print(abs(err_M).max(), 1E-2 * delta_star_analytical.max())
-    # print(abs(err_H).max(), 1E-2 * H0)
-    assert abs(err_M).max() < 1E-2 * delta_star_analytical.max()
-    assert abs(err_H).max() < 1E-2 * H0
+    #print(abs(err_M).max(), 1E-2 * delta_star_analytical.max())
+    #print(abs(err_H).max(), 1E-2 * H0)
+    assert abs(err_M).max() < 3E-2 * delta_star_analytical.max()
+    assert abs(err_H).max() < 3E-2 * H0
     return ibl
 
 if __name__ == '__main__':

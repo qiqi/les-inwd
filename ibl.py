@@ -34,22 +34,23 @@ class Settings:
 
 class IBL:
     def __init__(self, xgrid, zgrid, nu, dt, closure_cls, dissipation=0.02,
-                 extend_M=periodic_M, extend_trP=periodic_trP):
+                 extend_M=periodic_M, extend_trP=periodic_trP, dtype=float64):
         self.settings = Settings(xgrid, zgrid, nu, dt)
         self.dissipation = dissipation
         self.extend_M = extend_M
         self.extend_trP = extend_trP
         self.closure = closure_cls()
+        self.dtype = dtype
 
     def init(self, M, trP):
         nx, nz = self.settings.nx, self.settings.nz
         if M.ndim == 3:
-            M = array([M, M])
-            trP = array([trP, trP])
+            M = array([M, M], dtype=self.dtype)
+            trP = array([trP, trP], dtype=self.dtype)
         assert M.shape == (2, 2, nx, nz)
         assert trP.shape == (2, nx, nz)
-        self.M = M
-        self.trP = trP
+        self.M = array(M, dtype=self.dtype)
+        self.trP = array(trP, dtype=self.dtype)
 
     def ddt(self, flx, u, adv, src, diss):
         '''
@@ -75,6 +76,9 @@ class IBL:
         assert qe0.shape == (2, nx+2, nz+2)
         assert qe1.shape == (2, nx+2, nz+2)
         assert pe.shape == (nx+2, nz+2)
+
+        qe0, qe1 = array([qe0, qe1], dtype=self.dtype)
+        pe = array(pe, dtype=self.dtype)
 
         M = self.extend_M(1.5 * self.M[1] - 0.5 * self.M[0])
         trP = self.extend_trP(1.5 * self.trP[1] - 0.5 * self.trP[0])
@@ -106,17 +110,19 @@ class Laminar2dClosure:
     @classmethod
     def __call__(cls, M, trP, qe, nu):
         qe_mag = sqrt(qe[0]**2 + qe[1]**2)
-        P = trP * qe * qe[:,newaxis] / qe_mag**2
+        qe_by_qe_mag = qe / qe_mag
+        qe_by_qe_mag[~isfinite(qe_by_qe_mag)] = sqrt(0.5)
+        P = trP * qe_by_qe_mag * qe_by_qe_mag[:,newaxis]
         qe2_theta = (M * qe).sum(0) - trP
-        Re_theta = qe2_theta / qe_mag / nu
+        one_over_Re_theta = nu * qe_mag / qe2_theta
         H = (M * qe).sum(0) / qe2_theta
         H[~isfinite(H)] = 2
-        Re_theta[Re_theta < 0.1] = 0.1
+        H[H<1.01] = 1.01
 
         Hstar = cls.Hstar_H(H)
-        tau_w = qe * qe_mag / 2 * cls.Cf_H(H) / Re_theta
+        tau_w = qe * qe_mag / 2 * cls.Cf_H(H) * one_over_Re_theta
         K = qe_mag**2 / 2 * M * Hstar / H
-        D = qe_mag**3 * cls.Cd_H(H) / Re_theta
+        D = qe_mag**3 * cls.Cd_H(H) * one_over_Re_theta
         #pdb.set_trace()
         return P, H, tau_w, K, D
 
@@ -139,9 +145,55 @@ class MyLaminar2dClosure(Laminar2dClosure):
         return Cf_o2 * 2
 
 
+def test_stokes_layer_const_v():
+    dt = 0.1
+    xgrid = arange(2, dtype=float)
+    zgrid = arange(2, dtype=float)
+    M0, H0, nu = 1, 2.413, 1.0
+    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
+    P0 = M0 * (1 - 1 / H0)
+    ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
+             array(P0, dtype=float).reshape([1,1]))
+    Z = zeros([3,3], dtype=float)
+    ue = array([1,0])[:,newaxis,newaxis] + Z
+    M_history, H_history = [M0], [H0]
+    for istep in range(1000):
+        ibl.timestep(ue, ue, Z)
+        M_history.append(ibl.M[1,0,0,0])
+        H_history.append(ibl.H[0,0])
+    M = array(M_history)
+    H = array(H_history)
+    t = dt * arange(M.size)
+    M_analytical = 1.128 * sqrt(nu * t + (M0 / 1.128)**2)
+    # subplot(2,1,1); plot(t, M); plot(t, M_analytical, '--k')
+    # subplot(2,1,2); plot(t, H)
+    assert abs(M - M_analytical).max() < M_analytical.max() * 1E-2
+    assert abs(H - H0).max() < H0 * 2.5E-2
+    return ibl
 
 if __name__ == '__main__':
-    for a0, dstar0, H0, dt, nsteps in a_dstar_H_dt_nsteps_table[:8]:
-        figure()
-        test_falkner_skan_x(a0, dstar0, H0, dt, nsteps)
-        title('H={}'.format(H0))
+    dt, omega = 0.1, 0.1
+    xgrid = arange(2, dtype=float)
+    zgrid = arange(2, dtype=float)
+    M0, H0, nu = 1, 2.413, 1.0
+    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
+    P0 = M0 * (1 - 1 / H0)
+    ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
+             array(P0, dtype=float).reshape([1,1]))
+    Z = zeros([3,3], dtype=float)
+    M_history, H_history, qe_history = [M0], [H0], [0]
+    ue = zeros([2,1,1]) + Z
+    for istep in range(1000):
+        ue0 = ue.copy()
+        ue[0,:] = sin(istep * dt * omega)
+        ibl.timestep(ue0, ue, Z)
+        M_history.append(ibl.M[1,0,0,0])
+        H_history.append(ibl.H[0,0])
+        qe_history.append(ue[0,0,0])
+    M = array(M_history)
+    H = array(H_history)
+    t = dt * arange(M.size)
+    M_analytical = sqrt(nu / (2 * omega)) * (sin(omega * t) + cos(omega * t))
+    subplot(3,1,1); plot(t, qe_history)
+    subplot(3,1,2); plot(t, M); plot(t, M_analytical, '--k')
+    subplot(3,1,3); plot(t, H)

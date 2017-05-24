@@ -24,7 +24,7 @@ def i(u):
     return rollfwd(rollback(u)[1:-1,1:-1])
 
 def periodic_M(M):
-    M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2])
+    M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
     M_ext[:,1:-1,1:-1] = M
     M_ext[:,1:-1,0] = M[:,:,-1]
     M_ext[:,1:-1,-1] = M[:,:,0]
@@ -33,7 +33,7 @@ def periodic_M(M):
     return M_ext
 
 def periodic_trP(P):
-    P_ext = zeros([P.shape[0]+2, P.shape[1]+2])
+    P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype)
     P_ext[1:-1,1:-1] = P
     P_ext[1:-1,0] = P[:,-1]
     P_ext[1:-1,-1] = P[:,0]

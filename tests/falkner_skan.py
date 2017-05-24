@@ -43,15 +43,15 @@ def test_falkner_skan_x(a0, dstar0, H0, dt, nsteps=10):
     M_analytical = dstar_analytical * qe_x[1:-1]
     p_analytical = dstar_analytical * qe_x[1:-1]**2 * (1 - 1 / H0)
     ibl.init(array([M0 * 3 + Z, Z]), P0 * 3 + Z)
-    #plot(x, ibl.M[1,0,:,0] / qe_x[1:-1])
+    plot(x, ibl.M[1,0,:,0] / qe_x[1:-1])
     Z = zeros([nx+2, nz+2])
     qe = array([transpose([qe_x] * 3), Z])
     pe = -0.5 * (qe**2).sum(0)
     for istep in range(int(nsteps*250)):
         ibl.timestep(qe, qe, pe)
-        #if (istep + 1) % 250 == 0:
-        #    plot(x, ibl.M[1,0,:,0] / qe_x[1:-1])
-    #plot(x, dstar_analytical, '--k')
+        if (istep + 1) % 250 == 0:
+            plot(x, ibl.M[1,0,:,0] / qe_x[1:-1])
+    plot(x, dstar_analytical, '--k')
     err_M = ibl.M[1,0,:,0] / qe_x[1:-1] - dstar_analytical
     err_H = ibl.H - H0
     assert abs(err_M).max() < 1E-2 * dstar_analytical.max()
@@ -73,6 +73,6 @@ a_dstar_H_dt_nsteps_table = array([[2, 0.47648, 2.1882, 1E-3, 10],
 
 if __name__ == '__main__':
     for a0, dstar0, H0, dt, nsteps in a_dstar_H_dt_nsteps_table[:8]:
-        #figure()
+        figure()
         test_falkner_skan_x(a0, dstar0, H0, dt, nsteps)
-        #title('H={}'.format(H0))
+        title('H={}'.format(H0))
