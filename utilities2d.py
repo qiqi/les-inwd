@@ -1,4 +1,4 @@
-__all__ = ['ip', 'im', 'kp', 'km', 'i', 'periodic_M', 'periodic_trP']
+__all__ = ['ip', 'im', 'kp', 'km', 'i', 'periodic_M', 'periodic_trQ']
 
 from numpy import *
 
@@ -32,11 +32,11 @@ def periodic_M(M):
     M_ext[:,-1,:] = M_ext[:,1,:]
     return M_ext
 
-def periodic_trP(P):
-    P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype)
-    P_ext[1:-1,1:-1] = P
-    P_ext[1:-1,0] = P[:,-1]
-    P_ext[1:-1,-1] = P[:,0]
-    P_ext[0,:] = P_ext[-2,:]
-    P_ext[-1,:] = P_ext[1,:]
-    return P_ext
+def periodic_trQ(Q):
+    Q_ext = zeros([Q.shape[0]+2, Q.shape[1]+2], dtype=Q.dtype)
+    Q_ext[1:-1,1:-1] = Q
+    Q_ext[1:-1,0] = Q[:,-1]
+    Q_ext[1:-1,-1] = Q[:,0]
+    Q_ext[0,:] = Q_ext[-2,:]
+    Q_ext[-1,:] = Q_ext[1,:]
+    return Q_ext

@@ -9,11 +9,11 @@ from numpy import *
 
 from ibl import *
 
-test_dtype = float16
+test_dtype = float32
 
 def test_blasius_x():
     nu, M0, H0 = 1E-4, 2E-3, 2.59
-    P0 = M0 * (1 - 1 / H0)
+    Q0 = M0 * (1 - 1 / H0)
 
     def extend_M(M):
         M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
@@ -24,21 +24,21 @@ def test_blasius_x():
         M_ext[:,-1,:] = M_ext[:,-2,:]
         return M_ext
 
-    def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype) + P0
-        P_ext[1:-1,1:-1] = P
-        P_ext[1:-1,0] = P[:,0]
-        P_ext[1:-1,-1] = P[:,-1]
-        P_ext[-1,:] = P_ext[-2,:]
-        return P_ext
+    def extend_trQ(Q):
+        Q_ext = zeros([Q.shape[0]+2, Q.shape[1]+2], dtype=Q.dtype) + Q0
+        Q_ext[1:-1,1:-1] = Q
+        Q_ext[1:-1,0] = Q[:,0]
+        Q_ext[1:-1,-1] = Q[:,-1]
+        Q_ext[-1,:] = Q_ext[-2,:]
+        return Q_ext
 
     nx, nz, dt = 100, 1, 2E-3
     xgrid = arange(nx+1, dtype=test_dtype) / nx
     zgrid = arange(nz+1, dtype=test_dtype) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+              extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
-    ibl.init(array([M0 + Z, Z]), P0 + Z)
+    ibl.init(array([M0 + Z, Z]), Q0 + Z)
     Z = zeros([nx+2, nz+2], dtype=test_dtype)
     qe = array([1 + Z, Z])
     pe = Z
@@ -50,6 +50,8 @@ def test_blasius_x():
     delta_star_analytical = 1.72 * sqrt(nu * (x + x[0]) + (M0 / 1.72)**2)
     #plot(x, delta_star_analytical, '--k')
     err_M = ibl.M[1,0,:,0] - delta_star_analytical
+    M_qe = (ibl.M[1] * qe[:,1:-1,1:-1]).sum(0)
+    ibl.H = M_qe / (M_qe - ibl.trQ[1])
     err_H = ibl.H - H0
     #print(abs(err_M).max(), delta_star_analytical.max())
     #print(abs(err_H).max(), H0)
@@ -59,7 +61,7 @@ def test_blasius_x():
 
 def test_blasius_z():
     nu, M0, H0 = 1E-3, 1E-2, 2.59
-    P0 = M0 * (1 - 1 / H0)
+    Q0 = M0 * (1 - 1 / H0)
 
     def extend_M(M):
         M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
@@ -70,21 +72,21 @@ def test_blasius_z():
         M_ext[:,:,-1] = M_ext[:,:,-2]
         return M_ext
 
-    def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype) + P0
-        P_ext[1:-1,1:-1] = P
-        P_ext[0,1:-1] = P[0,:]
-        P_ext[-1,1:-1] = P[-1,:]
-        P_ext[:,-1] = P_ext[:,-2]
-        return P_ext
+    def extend_trQ(Q):
+        Q_ext = zeros([Q.shape[0]+2, Q.shape[1]+2], dtype=Q.dtype) + Q0
+        Q_ext[1:-1,1:-1] = Q
+        Q_ext[0,1:-1] = Q[0,:]
+        Q_ext[-1,1:-1] = Q[-1,:]
+        Q_ext[:,-1] = Q_ext[:,-2]
+        return Q_ext
 
     nx, nz, dt = 2, 100, 0.1
     xgrid = arange(nx+1, dtype=test_dtype) / nx
     zgrid = arange(nz+1, dtype=test_dtype) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+              extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
-    ibl.init(array([Z, M0 + Z]), P0 + Z)
+    ibl.init(array([Z, M0 + Z]), Q0 + Z)
     Z = zeros([nx+2, nz+2], dtype=test_dtype)
     qe = array([Z, 1 + Z])
     pe = Z
@@ -96,6 +98,8 @@ def test_blasius_z():
     delta_star_analytical = 1.72 * sqrt(nu * (z + z[0]) + (M0 / 1.72)**2)
     #plot(z, delta_star_analytical, '--k')
     err_M = ibl.M[1,1] - delta_star_analytical
+    M_qe = (ibl.M[1] * qe[:,1:-1,1:-1]).sum(0)
+    ibl.H = M_qe / (M_qe - ibl.trQ[1])
     err_H = ibl.H - H0
     assert abs(err_M).max() < 3E-2 * delta_star_analytical.max()
     assert abs(err_H).max() < 3E-2 * H0
@@ -113,8 +117,8 @@ def test_blasius_xz():
     d_z0 = -0.5 / nx * qe0[1] + (arange(nx) + 0.5) / nx * qe0[0]
     M_x0 = 1.72 * sqrt(nu * d_x0 + (M0 / 1.72)**2)
     M_z0 = 1.72 * sqrt(nu * d_z0 + (M0 / 1.72)**2)
-    P_x0 = M_x0 * (1 - 1 / H0)
-    P_z0 = M_z0 * (1 - 1 / H0)
+    Q_x0 = M_x0 * (1 - 1 / H0)
+    Q_z0 = M_z0 * (1 - 1 / H0)
 
     def extend_M(M):
         M_ext = zeros([M.shape[0], M.shape[1]+2, M.shape[2]+2], dtype=M.dtype)
@@ -126,18 +130,18 @@ def test_blasius_xz():
         M_ext[:,:,-1] = M_ext[:,:,-2]
         return M_ext
 
-    def extend_trP(P):
-        P_ext = zeros([P.shape[0]+2, P.shape[1]+2], dtype=P.dtype)
-        P_ext[1:-1,1:-1] = P
-        P_ext[0,1:-1] = P_x0
-        P_ext[1:-1,0] = P_z0
-        P_ext[0,0] = (P_ext[1,0] + P_ext[0,1]) / 2
-        P_ext[-1,:] = P_ext[-2,:]
-        P_ext[:,-1] = P_ext[:,-2]
-        return P_ext
+    def extend_trQ(Q):
+        Q_ext = zeros([Q.shape[0]+2, Q.shape[1]+2], dtype=Q.dtype)
+        Q_ext[1:-1,1:-1] = Q
+        Q_ext[0,1:-1] = Q_x0
+        Q_ext[1:-1,0] = Q_z0
+        Q_ext[0,0] = (Q_ext[1,0] + Q_ext[0,1]) / 2
+        Q_ext[-1,:] = Q_ext[-2,:]
+        Q_ext[:,-1] = Q_ext[:,-2]
+        return Q_ext
 
-    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure,
-              extend_M=extend_M, extend_trP=extend_trP, dtype=test_dtype)
+    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+              extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(M0 * qe0[:,newaxis,newaxis] + Z, M0 * (1 - 1 / H0) + Z)
     Z = zeros([nx+2, nz+2], dtype=test_dtype)
@@ -153,6 +157,8 @@ def test_blasius_xz():
     # subplot(2,1,1); plot(d, qe0[0] * delta_star_analytical, ':k')
     # subplot(2,1,2); plot(d, qe0[1] * delta_star_analytical, ':k')
     err_M = ibl.M[1] - qe0[:,newaxis,newaxis] * delta_star_analytical
+    M_qe = (ibl.M[1] * qe[:,1:-1,1:-1]).sum(0)
+    ibl.H = M_qe / (M_qe - ibl.trQ[1])
     err_H = ibl.H - H0
     #print(abs(err_M).max(), 1E-2 * delta_star_analytical.max())
     #print(abs(err_H).max(), 1E-2 * H0)

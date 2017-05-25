@@ -1,4 +1,4 @@
-__all__ = ['IBL', 'Laminar2dClosure', 'MyLaminar2dClosure']
+__all__ = ['IBL', 'ClassicLaminar2dClosure']
 
 import os
 import sys
@@ -33,24 +33,24 @@ class Settings:
 
 
 class IBL:
-    def __init__(self, xgrid, zgrid, nu, dt, closure_cls, dissipation=0.02,
-                 extend_M=periodic_M, extend_trP=periodic_trP, dtype=float64):
+    def __init__(self, xgrid, zgrid, nu, dt, closure_cls, dissipation=0.05,
+                 extend_M=periodic_M, extend_trQ=periodic_trQ, dtype=float64):
         self.settings = Settings(xgrid, zgrid, nu, dt)
         self.dissipation = dissipation
         self.extend_M = extend_M
-        self.extend_trP = extend_trP
+        self.extend_trQ = extend_trQ
         self.closure = closure_cls()
         self.dtype = dtype
 
-    def init(self, M, trP):
+    def init(self, M, trQ):
         nx, nz = self.settings.nx, self.settings.nz
         if M.ndim == 3:
             M = array([M, M], dtype=self.dtype)
-            trP = array([trP, trP], dtype=self.dtype)
+            trQ = array([trQ, trQ], dtype=self.dtype)
         assert M.shape == (2, 2, nx, nz)
-        assert trP.shape == (2, nx, nz)
+        assert trQ.shape == (2, nx, nz)
         self.M = array(M, dtype=self.dtype)
-        self.trP = array(trP, dtype=self.dtype)
+        self.trQ = array(trQ, dtype=self.dtype)
 
     def ddt(self, flx, u, adv, src, diss):
         '''
@@ -81,13 +81,12 @@ class IBL:
         pe = array(pe, dtype=self.dtype)
 
         M = self.extend_M(1.5 * self.M[1] - 0.5 * self.M[0])
-        trP = self.extend_trP(1.5 * self.trP[1] - 0.5 * self.trP[0])
+        trQ = self.extend_trQ(1.5 * self.trQ[1] - 0.5 * self.trQ[0])
         qe = 0.5 * (qe0 + qe1)
         h0e = (qe[0]**2 + qe[1]**2) / 2 + pe
-        P, H, tau_w, K, D = self.closure(M, trP, qe, self.settings.nu)
-        self.H = i(H)
+        Q, tau_w, K, D = self.closure(M, trQ, qe, self.settings.nu)
 
-        flxM = M * qe[:,newaxis] - P
+        flxM = M * qe[:,newaxis] - Q
         advM = qe
         srcM = tau_w
         disM = M
@@ -95,25 +94,41 @@ class IBL:
         self.M[0] = self.M[1]
         self.M[1] += ddtM * dt
 
-        flxP = K
-        advP = h0e
-        srcP = D
-        disP = (M * qe).sum(0) - trP / 2
-        ddtP = self.ddt(flxP, i(M), advP, srcP, disP)
-        self.trP[0] = self.trP[1]
+        flxQ = K
+        advQ = h0e
+        srcQ = D
+        disQ = (M * qe).sum(0) - trQ / 2
+        ddtQ = self.ddt(flxQ, i(M), advQ, srcQ, disQ)
+        self.trQ[0] = self.trQ[1]
         dMqe = (self.M[1] * i(qe1) - self.M[0] * i(qe0)).sum(0)
-        self.trP[1] -= (dt * ddtP - dMqe) * 2
+        self.trQ[1] -= (dt * ddtQ - dMqe) * 2
 
         #pdb.set_trace()
 
-class Laminar2dClosure:
+class LaminarUnsteady2dClosure:
     @classmethod
-    def __call__(cls, M, trP, qe, nu):
+    def __call__(cls, M, trQ, qe, nu):
         qe_mag = sqrt(qe[0]**2 + qe[1]**2)
         qe_by_qe_mag = qe / qe_mag
         qe_by_qe_mag[~isfinite(qe_by_qe_mag)] = sqrt(0.5)
-        P = trP * qe_by_qe_mag * qe_by_qe_mag[:,newaxis]
-        qe2_theta = (M * qe).sum(0) - trP
+        Q = trQ * qe_by_qe_mag * qe_by_qe_mag[:,newaxis]
+        H_Q = (M * qe).sum(0) / trQ
+        e_Q = nu * qe / trQ
+
+        K = cls.HQstar_HQ(H_Q, e_Q) * Q * qe
+        tau_w = qe * qe_mag / 2 * cls.Cf_H(H) * one_over_Re_theta
+        D = qe_mag**3 * cls.Cd_H(H) * one_over_Re_theta
+        #pdb.set_trace()
+        return Q, tau_w, K, D
+
+class LaminarSteady2dClosure:
+    @classmethod
+    def __call__(cls, M, trQ, qe, nu):
+        qe_mag = sqrt(qe[0]**2 + qe[1]**2)
+        qe_by_qe_mag = qe / qe_mag
+        qe_by_qe_mag[~isfinite(qe_by_qe_mag)] = sqrt(0.5)
+        Q = trQ * qe_by_qe_mag * qe_by_qe_mag[:,newaxis]
+        qe2_theta = (M * qe).sum(0) - trQ
         one_over_Re_theta = nu * qe_mag / qe2_theta
         H = (M * qe).sum(0) / qe2_theta
         H[~isfinite(H)] = 2
@@ -124,9 +139,9 @@ class Laminar2dClosure:
         K = qe_mag**2 / 2 * M * Hstar / H
         D = qe_mag**3 * cls.Cd_H(H) * one_over_Re_theta
         #pdb.set_trace()
-        return P, H, tau_w, K, D
+        return Q, tau_w, K, D
 
-class MyLaminar2dClosure(Laminar2dClosure):
+class ClassicLaminar2dClosure(LaminarSteady2dClosure):
     @classmethod
     def Hstar_H(cls, H):
         Hstar = 1.525 + (0.076 - 0.065 * (H-2) / H) * (H - 4)**2 / H
@@ -151,9 +166,9 @@ def test_stokes_layer_const_v():
     zgrid = arange(2, dtype=float)
     M0, H0, nu = 1, 2.413, 1.0
     ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
-    P0 = M0 * (1 - 1 / H0)
+    Q0 = M0 * (1 - 1 / H0)
     ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
-             array(P0, dtype=float).reshape([1,1]))
+             array(Q0, dtype=float).reshape([1,1]))
     Z = zeros([3,3], dtype=float)
     ue = array([1,0])[:,newaxis,newaxis] + Z
     M_history, H_history = [M0], [H0]
@@ -165,21 +180,22 @@ def test_stokes_layer_const_v():
     H = array(H_history)
     t = dt * arange(M.size)
     M_analytical = 1.128 * sqrt(nu * t + (M0 / 1.128)**2)
-    # subplot(2,1,1); plot(t, M); plot(t, M_analytical, '--k')
-    # subplot(2,1,2); plot(t, H)
+    subplot(2,1,1); plot(t, M); plot(t, M_analytical, '--k')
+    subplot(2,1,2); plot(t, H)
     assert abs(M - M_analytical).max() < M_analytical.max() * 1E-2
     assert abs(H - H0).max() < H0 * 2.5E-2
     return ibl
 
 if __name__ == '__main__':
+    #test_stokes_layer_const_v()
     dt, omega = 0.1, 0.1
     xgrid = arange(2, dtype=float)
     zgrid = arange(2, dtype=float)
     M0, H0, nu = 1, 2.413, 1.0
     ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
-    P0 = M0 * (1 - 1 / H0)
+    Q0 = M0 * (1 - 1 / H0)
     ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
-             array(P0, dtype=float).reshape([1,1]))
+             array(Q0, dtype=float).reshape([1,1]))
     Z = zeros([3,3], dtype=float)
     M_history, H_history, qe_history = [M0], [H0], [0]
     ue = zeros([2,1,1]) + Z
