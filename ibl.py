@@ -1,4 +1,5 @@
-__all__ = ['IBL', 'ClassicLaminar2dClosure']
+__all__ = ['IBL', 'ExtendedLaminar2dClosure', 'ClassicLaminar2dClosure',
+                  'ClassicLaminarSteady2dClosure']
 
 import os
 import sys
@@ -112,14 +113,66 @@ class LaminarUnsteady2dClosure:
         qe_by_qe_mag = qe / qe_mag
         qe_by_qe_mag[~isfinite(qe_by_qe_mag)] = sqrt(0.5)
         Q = trQ * qe_by_qe_mag * qe_by_qe_mag[:,newaxis]
-        H_Q = (M * qe).sum(0) / trQ
-        e_Q = nu * qe / trQ
 
-        K = cls.HQstar_HQ(H_Q, e_Q) * Q * qe
-        tau_w = qe * qe_mag / 2 * cls.Cf_H(H) * one_over_Re_theta
-        D = qe_mag**3 * cls.Cd_H(H) * one_over_Re_theta
+        H_Q = (qe * M).sum(0) / trQ
+        e_Q = nu * qe_mag / trQ
+        K = cls.HQstar_HQ(H_Q) * trQ * qe / 2
+        tau_w = cls.CfQ_HQ(H_Q) * qe_mag * qe / 2 * e_Q
+        D = cls.CdQ_HQ(H_Q) * (K * qe).sum(0) * qe_mag * e_Q / trQ
         #pdb.set_trace()
         return Q, tau_w, K, D
+
+class ClassicLaminar2dClosure(LaminarUnsteady2dClosure):
+    @classmethod
+    def HQstar_HQ(cls, H_Q):
+        coef = 0.076 * ones_like(H_Q)
+        coef[H_Q < 4./3] = 0.04
+        HQstar = 1.515 * (H_Q - 1) + coef * (3 * H_Q - 4)**2 / H_Q
+        return HQstar
+
+    @classmethod
+    def CfQ_HQ(cls, H_Q):
+        CfQ = 0.132 * (18.04 * (H_Q - 1) - 4.4) / (4 - 3 * H_Q)**2
+        CfQ2 = 0.132 * (((5.2 * H_Q - 6.2) / (H_Q - 1))**1.5 - 1 / (H_Q - 1))
+        CfQ[H_Q > 1.1923] = CfQ2[H_Q > 1.1923]
+        return CfQ
+
+    @classmethod
+    def CdQ_HQ(cls, H_Q):
+        CdQ = 0.207 + 0.00205 * ((3 * H_Q - 4) / (H_Q - 1))**5.5
+        CdQ[H_Q < 4./3] = 0.207 - 0.1 * ((3 * H_Q - 4) / H_Q)[H_Q < 4./3]**2
+        CdQ /= (H_Q - 1)**2
+        return CdQ
+
+class ExtendedLaminar2dClosure(LaminarUnsteady2dClosure):
+    @classmethod
+    def HQstar_HQ(cls, H_Q):
+        #coef = 0.076 * ones_like(H_Q)
+        #coef[H_Q < 4./3] = 0.04
+        #HQstar = 1.515 * (H_Q - 1) + coef * (3 * H_Q - 4)**2 / H_Q
+        #HQstar[H_Q < 1] = 0.04 + 1.235 * (H_Q[H_Q < 1] - 1)
+        HQstar = (2.794 * H_Q**3 - 6.079 * H_Q**2 + 5.376 * H_Q - 2.08) / H_Q**2
+        HQstar[H_Q < 1] = 0.011 + 1.578 * (H_Q[H_Q < 1] - 1)
+        return HQstar
+
+    @classmethod
+    def CfQ_HQ(cls, H_Q):
+        CfQ = 0.132 * (18.04 * (H_Q - 1) - 4.4) / (4 - 3 * H_Q)**2
+        CfQ2 = 0.132 * (((5.2 * H_Q - 6.2) / (H_Q - 1))**1.5 - 1 / (H_Q - 1))
+        CfQ[H_Q > 1.1923] = CfQ2[H_Q > 1.1923]
+        CfQ[H_Q < 1] = 0.132 * (-4.4 - 8.36 * (H_Q[H_Q < 1] - 1))
+        return CfQ
+
+    @classmethod
+    def CdQ_HQ(cls, H_Q):
+        CdQ = 0.207 + 0.00205 * ((3 * H_Q - 4) / (H_Q - 1))**5.5
+        CdQ /= (H_Q - 1)**2
+        HQ_m_43 = H_Q[H_Q < 4./3] - 4./3
+        HQ_m_1 = H_Q[H_Q < 4./3] - 1
+        CdQ[H_Q < 4./3] = 0.207 - (HQ_m_43**2 + 0.15 * HQ_m_43) \
+                                / (10 * HQ_m_1**2 + 1.5)
+        CdQ[H_Q < 4./3] /= 1.991 * HQ_m_1**2 + 0.001
+        return CdQ
 
 class LaminarSteady2dClosure:
     @classmethod
@@ -141,7 +194,7 @@ class LaminarSteady2dClosure:
         #pdb.set_trace()
         return Q, tau_w, K, D
 
-class ClassicLaminar2dClosure(LaminarSteady2dClosure):
+class ClassicLaminarSteady2dClosure(LaminarSteady2dClosure):
     @classmethod
     def Hstar_H(cls, H):
         Hstar = 1.525 + (0.076 - 0.065 * (H-2) / H) * (H - 4)**2 / H
@@ -160,12 +213,12 @@ class ClassicLaminar2dClosure(LaminarSteady2dClosure):
         return Cf_o2 * 2
 
 
-def test_stokes_layer_const_v():
+def test_stokes_layer_const_v(closure):
     dt = 0.1
     xgrid = arange(2, dtype=float)
     zgrid = arange(2, dtype=float)
     M0, H0, nu = 1, 2.413, 1.0
-    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
+    ibl = IBL(xgrid, zgrid, nu, dt, closure)
     Q0 = M0 * (1 - 1 / H0)
     ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
              array(Q0, dtype=float).reshape([1,1]))
@@ -175,7 +228,8 @@ def test_stokes_layer_const_v():
     for istep in range(1000):
         ibl.timestep(ue, ue, Z)
         M_history.append(ibl.M[1,0,0,0])
-        H_history.append(ibl.H[0,0])
+        M_qe = (ibl.M[1,:,0,0] * ue[:,1,1]).sum()
+        H_history.append(M_qe / (M_qe - ibl.trQ[1,0,0]))
     M = array(M_history)
     H = array(H_history)
     t = dt * arange(M.size)
@@ -187,29 +241,30 @@ def test_stokes_layer_const_v():
     return ibl
 
 if __name__ == '__main__':
-    #test_stokes_layer_const_v()
+    # test_stokes_layer_const_v(ExtendedLaminar2dClosure)
     dt, omega = 0.1, 0.1
     xgrid = arange(2, dtype=float)
     zgrid = arange(2, dtype=float)
     M0, H0, nu = 1, 2.413, 1.0
-    ibl = IBL(xgrid, zgrid, nu, dt, MyLaminar2dClosure)
+    ibl = IBL(xgrid, zgrid, nu, dt, ExtendedLaminar2dClosure)
     Q0 = M0 * (1 - 1 / H0)
     ibl.init(array([M0, 0], dtype=float).reshape([2,1,1]),
              array(Q0, dtype=float).reshape([1,1]))
     Z = zeros([3,3], dtype=float)
     M_history, H_history, qe_history = [M0], [H0], [0]
     ue = zeros([2,1,1]) + Z
-    for istep in range(1000):
+    for istep in range(10000):
         ue0 = ue.copy()
         ue[0,:] = sin(istep * dt * omega)
         ibl.timestep(ue0, ue, Z)
         M_history.append(ibl.M[1,0,0,0])
-        H_history.append(ibl.H[0,0])
+        M_qe = (ibl.M[1,:,0,0] * ue[:,1,1]).sum()
+        H_history.append(M_qe / (M_qe - ibl.trQ[1,0,0]))
         qe_history.append(ue[0,0,0])
     M = array(M_history)
     H = array(H_history)
     t = dt * arange(M.size)
     M_analytical = sqrt(nu / (2 * omega)) * (sin(omega * t) + cos(omega * t))
-    subplot(3,1,1); plot(t, qe_history)
-    subplot(3,1,2); plot(t, M); plot(t, M_analytical, '--k')
-    subplot(3,1,3); plot(t, H)
+    subplot(3,1,1); plot(t, qe_history); ylabel('qe')
+    subplot(3,1,2); plot(t, M); plot(t, M_analytical, '--k'); ylabel('M')
+    subplot(3,1,3); plot(t, H); ylabel('H')

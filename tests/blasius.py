@@ -9,9 +9,7 @@ from numpy import *
 
 from ibl import *
 
-test_dtype = float32
-
-def test_blasius_x():
+def test_blasius_x(test_dtype, closure):
     nu, M0, H0 = 1E-4, 2E-3, 2.59
     Q0 = M0 * (1 - 1 / H0)
 
@@ -35,7 +33,7 @@ def test_blasius_x():
     nx, nz, dt = 100, 1, 2E-3
     xgrid = arange(nx+1, dtype=test_dtype) / nx
     zgrid = arange(nz+1, dtype=test_dtype) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+    ibl = IBL(xgrid, zgrid, nu, dt, closure,
               extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(array([M0 + Z, Z]), Q0 + Z)
@@ -45,10 +43,10 @@ def test_blasius_x():
     x = ibl.settings.xc[:,0]
     for istep in range(2500):
         ibl.timestep(qe, qe, pe)
-        #if (istep + 1) % 500 == 0:
-        #    plot(x, ibl.M[1,0,:,0])
+        if (istep + 1) % 500 == 0:
+            plot(x, ibl.M[1,0,:,0])
     delta_star_analytical = 1.72 * sqrt(nu * (x + x[0]) + (M0 / 1.72)**2)
-    #plot(x, delta_star_analytical, '--k')
+    plot(x, delta_star_analytical, '--k')
     err_M = ibl.M[1,0,:,0] - delta_star_analytical
     M_qe = (ibl.M[1] * qe[:,1:-1,1:-1]).sum(0)
     ibl.H = M_qe / (M_qe - ibl.trQ[1])
@@ -59,7 +57,7 @@ def test_blasius_x():
     assert abs(err_H).max() < 3E-2 * H0
     return ibl
 
-def test_blasius_z():
+def test_blasius_z(test_dtype, closure):
     nu, M0, H0 = 1E-3, 1E-2, 2.59
     Q0 = M0 * (1 - 1 / H0)
 
@@ -83,7 +81,7 @@ def test_blasius_z():
     nx, nz, dt = 2, 100, 0.1
     xgrid = arange(nx+1, dtype=test_dtype) / nx
     zgrid = arange(nz+1, dtype=test_dtype) / nx
-    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+    ibl = IBL(xgrid, zgrid, nu, dt, closure,
               extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(array([Z, M0 + Z]), Q0 + Z)
@@ -105,7 +103,7 @@ def test_blasius_z():
     assert abs(err_H).max() < 3E-2 * H0
     return ibl
 
-def test_blasius_xz():
+def test_blasius_xz(test_dtype, closure):
     nu, M0, H0 = 1E-6, 1E-3, 2.59
     qe0 = array([1, sqrt(3)]) / 2
 
@@ -140,7 +138,7 @@ def test_blasius_xz():
         Q_ext[:,-1] = Q_ext[:,-2]
         return Q_ext
 
-    ibl = IBL(xgrid, zgrid, nu, dt, ClassicLaminar2dClosure,
+    ibl = IBL(xgrid, zgrid, nu, dt, closure,
               extend_M=extend_M, extend_trQ=extend_trQ, dtype=test_dtype)
     Z = zeros([nx,nz], dtype=test_dtype)
     ibl.init(M0 * qe0[:,newaxis,newaxis] + Z, M0 * (1 - 1 / H0) + Z)
@@ -168,6 +166,12 @@ def test_blasius_xz():
 
 if __name__ == '__main__':
     from pylab import *
-    ibl = test_blasius_x()
-    ibl = test_blasius_z()
-    ibl = test_blasius_xz()
+    ibl = test_blasius_x(float32, ExtendedLaminar2dClosure)
+    ibl = test_blasius_z(float32, ExtendedLaminar2dClosure)
+    ibl = test_blasius_xz(float32, ExtendedLaminar2dClosure)
+    ibl = test_blasius_x(float32, ClassicLaminarSteady2dClosure)
+    ibl = test_blasius_z(float32, ClassicLaminarSteady2dClosure)
+    ibl = test_blasius_xz(float32, ClassicLaminarSteady2dClosure)
+    ibl = test_blasius_x(float32, ClassicLaminar2dClosure)
+    ibl = test_blasius_z(float32, ClassicLaminar2dClosure)
+    ibl = test_blasius_xz(float32, ClassicLaminar2dClosure)
